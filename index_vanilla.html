@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mazaosmart - Soil Moisture Monitoring System</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0f2318',
+                        foreground: '#f5efe6',
+                        card: '#162e1e',
+                        'card-foreground': '#f5efe6',
+                        primary: {
+                            DEFAULT: '#4caf7d',
+                            foreground: '#0a1c11',
+                        },
+                        secondary: {
+                            DEFAULT: '#2a4a35',
+                            foreground: '#d0c9b8',
+                        },
+                        muted: {
+                            DEFAULT: '#1e3829',
+                            foreground: '#8aab90',
+                        },
+                        accent: {
+                            DEFAULT: '#e8a042',
+                            foreground: '#0f2318',
+                        },
+                        destructive: '#e05a4e',
+                    },
+                    fontFamily: {
+                        display: ['Barlow Condensed', 'sans-serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                        mono: ['DM Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Three.js and OrbitControls CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
+
+        html {
+            scroll-behavior: smooth;
+            background-color: #0f2318;
+        }
+
+        body {
+            background-color: #0f2318;
+            color: #f5efe6;
+            font-family: 'DM Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            opacity: 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(76, 175, 125, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .font-display {
+            font-family: 'Barlow Condensed', sans-serif;
+        }
+
+        .font-mono-data {
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* Flow animation for pipe */
+        @keyframes flow {
+            0% {
+                stroke-dashoffset: 24;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .water-flow-pipe {
+            stroke-dasharray: 8, 4;
+            animation: flow 1.5s linear infinite;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen flex flex-col justify-between selection:bg-primary selection:text-primary-foreground selection:font-semibold">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full"></div>
+
+    <!-- Main Navigation -->
+    <nav
+        class="sticky top-0 bg-background/90 backdrop-blur-md border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center z-40 transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-10 h-10 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold text-lg font-display tracking-wider">
+                MS</div>
+            <div>
+                <h1 class="font-display text-xl font-bold tracking-widest text-[#f5efe6] uppercase">Mazaosmart</h1>
+                <p class="text-[9px] font-mono-data text-muted-foreground uppercase tracking-widest -mt-1">Telemetry
+                    Node Network</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-6 text-sm text-[#8aab90] font-mono-data">
+                <div class="flex items-center gap-2 border border-white/5 bg-card px-3 py-1.5 rounded-full">
+                    <div class="w-2 h-2 rounded-full bg-primary animate-ping"></div>
+                    <span class="text-[11px] text-primary uppercase font-bold tracking-wider">Base Station
+                        Connected</span>
+                </div>
+                <div class="flex items-center gap-2 border border-white/5 bg-card px-3 py-1.5 rounded-full">
+                    <span class="text-[11px] text-[#e8a042] uppercase font-bold tracking-wider">LoRa 868MHz</span>
+                </div>
+            </div>
+            <a href="#field-map"
+                class="text-xs uppercase font-mono-data px-4 py-2 border border-white/10 hover:border-primary/50 text-[#c8c0b0] hover:text-primary rounded transition-all duration-350">
+                Jump to Map &darr;
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header
+        class="relative overflow-hidden pt-16 pb-20 bg-gradient-to-b from-[#0c1e13] to-[#0f2318] border-b border-white/5">
+        <div class="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <div class="flex items-center gap-2.5 mb-4">
+                    <div class="w-6 h-[1px] bg-accent"></div>
+                    <span class="font-mono-data text-[10px] tracking-[0.2em] text-accent uppercase">Mbarara Pilot
+                        Site</span>
+                </div>
+                <h2
+                    class="font-display text-5xl md:text-7xl font-extrabold uppercase tracking-tight text-[#f5efe6] leading-[0.9] mb-6">
+                    Agro-Telemetry<br>Dashboard
+                </h2>
+                <p class="text-[#c8c0b0] text-base md:text-lg leading-relaxed max-w-lg mb-8">
+                    Stand-alone smart irrigation controller and LoRa soil moisture network. Monitoring soil moisture in
+                    real-time to optimize water deployment and crop health.
+                </p>
+
+                <!-- Live indicators grid -->
+                <div class="grid grid-cols-3 gap-4" id="hero-kpis">
+                    <div class="bg-card p-4 rounded-xl border border-white/5">
+                        <span
+                            class="text-[9px] font-mono-data text-muted-foreground uppercase block tracking-wider mb-1">Avg
+                            Moisture</span>
+                        <span id="kpi-avg-moisture"
+                            class="font-display text-3xl font-extrabold text-[#f5efe6]">60.5%</span>
+                    </div>
+                    <div class="bg-card p-4 rounded-xl border border-white/5">
+                        <span
+                            class="text-[9px] font-mono-data text-muted-foreground uppercase block tracking-wider mb-1">Water
+                            Consumed</span>
+                        <span id="kpi-water" class="font-display text-3xl font-extrabold text-[#f5efe6]">0 L</span>
+                    </div>
+                    <div class="bg-card p-4 rounded-xl border border-white/5">
+                        <span
+                            class="text-[9px] font-mono-data text-muted-foreground uppercase block tracking-wider mb-1">Active
+                            Valves</span>
+                        <span id="kpi-valves" class="font-display text-3xl font-extrabold text-[#f5efe6]">0 / 6</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Main Live Card representation -->
+            <div
+                class="bg-gradient-to-br from-[#162e1e] to-[#0f2318] rounded-2xl border border-primary/20 p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
+                <div class="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-primary/5 blur-3xl"></div>
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <div class="font-mono-data text-xs text-primary font-bold uppercase tracking-wider mb-1">Live
+                            Telemetry Node</div>
+                        <h3 class="font-display text-3xl font-bold uppercase text-[#f5efe6]">Mbarara Station A1</h3>
+                    </div>
+                    <span
+                        class="bg-[#4caf7d]/10 text-primary border border-[#4caf7d]/20 px-2 py-1 rounded text-[10px] font-bold tracking-wider font-mono-data uppercase">Optimal</span>
+                </div>
+
+                <div class="flex justify-between items-center py-4 border-y border-white/5 mb-6">
+                    <div>
+                        <span class="text-[10px] font-mono-data text-muted-foreground uppercase block mb-1">Active
+                            Crop</span>
+                        <span class="text-lg font-bold text-[#f5efe6]">Maize (Zea mays)</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-mono-data text-muted-foreground uppercase block mb-1">Soil
+                            Temperature</span>
+                        <span class="text-lg font-bold text-[#f5efe6]">24.3 &deg;C</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-around items-center">
+                    <div class="text-center">
+                        <div class="text-[10px] font-mono-data text-muted-foreground uppercase mb-2">Moisture Level
+                        </div>
+                        <div class="font-display text-5xl font-extrabold text-primary">62.0%</div>
+                    </div>
+                    <div class="w-[1px] h-12 bg-white/5"></div>
+                    <div class="text-center">
+                        <div class="text-[10px] font-mono-data text-muted-foreground uppercase mb-2">Battery Status
+                        </div>
+                        <div class="font-display text-3xl font-extrabold text-accent">87%</div>
+                    </div>
+                    <div class="w-[1px] h-12 bg-white/5"></div>
+                    <div class="text-center">
+                        <div class="text-[10px] font-mono-data text-muted-foreground uppercase mb-2">LoRa Signal</div>
+                        <div class="font-display text-3xl font-extrabold text-[#8aab90]">88 dBm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Simulation Control Section -->
+    <section class="bg-card/40 border-b border-white/5 py-6 px-6 md:px-12">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row gap-6 justify-between items-center">
+            <div class="flex flex-wrap items-center gap-4">
+                <!-- Play / Pause -->
+                <button id="sim-toggle-pause"
+                    class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-[#45a072] text-[#0a1c11] font-bold text-sm uppercase tracking-wider transition-all shadow-md font-mono-data">
+                    <span>Pause Simulation</span>
+                </button>
+
+                <!-- Speed Controls -->
+                <div class="flex items-center bg-[#0c1e13] rounded-lg p-1 border border-white/5">
+                    <span
+                        class="text-[9px] font-mono-data text-muted-foreground uppercase tracking-widest px-3">Speed:</span>
+                    <button id="sim-speed-1"
+                        class="px-3 py-1.5 rounded font-mono-data text-xs uppercase font-bold text-[#8aab90] hover:text-white transition-all bg-card/60">3s</button>
+                    <button id="sim-speed-3"
+                        class="px-3 py-1.5 rounded font-mono-data text-xs uppercase font-bold text-[#8aab90] hover:text-white transition-all bg-card/10">1s</button>
+                    <button id="sim-speed-10"
+                        class="px-3 py-1.5 rounded font-mono-data text-xs uppercase font-bold text-[#8aab90] hover:text-white transition-all bg-card/10">0.3s</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Scenario Triggers -->
+                <button id="sim-trigger-drought"
+                    class="px-4 py-2 border border-accent/20 hover:border-accent bg-accent/5 hover:bg-accent/10 text-accent rounded text-xs font-mono-data uppercase font-bold transition-all">🌵
+                    Simulate Drought</button>
+                <button id="sim-trigger-rain"
+                    class="px-4 py-2 border border-primary/20 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary rounded text-xs font-mono-data uppercase font-bold transition-all">🌧
+                    Simulate Rain</button>
+                <!-- Utilities -->
+                <button id="sim-export-csv"
+                    class="px-4 py-2 border border-[#8aab90]/20 hover:border-[#8aab90] bg-card hover:bg-card-foreground/5 text-[#8aab90] rounded text-xs font-mono-data uppercase font-bold transition-all">📥
+                    Export CSV</button>
+                <button id="sim-reset"
+                    class="px-4 py-2 border border-destructive/20 hover:border-destructive bg-destructive/5 hover:bg-destructive/10 text-destructive rounded text-xs font-mono-data uppercase font-bold transition-all">🔄
+                    Reset</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Placeholder (Sections will be mounted/updated here) -->
+    <main class="flex-grow">
+        <!-- Map Section -->
+        <div id="field-map-container"></div>
+
+        <!-- Sensor Controls Section -->
+        <div id="sensors-control-container"></div>
+
+        <!-- Logs Section -->
+        <div id="event-log-container"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0a1c11] border-t border-white/5 py-12 px-6 md:px-12 text-[#8aab90] text-sm font-mono-data">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <p>&copy; 2026 Mazaosmart Agricultural Solutions. Stand-alone Telemetry App.</p>
+                <p class="text-[10px] text-muted-foreground mt-1">Deployable offline HTML controller. Powered by Vanilla
+                    javascript.</p>
+            </div>
+            <div class="flex gap-6 uppercase text-xs">
+                <a href="#field-map" class="hover:text-primary">Map</a>
+                <a href="#sensors-section" class="hover:text-primary">Sensors</a>
+                <a href="#event-log" class="hover:text-primary">Event Log</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Node Edit/Add Dialogue Modal -->
+    <div id="node-modal"
+        class="fixed inset-0 bg-background/85 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div
+            class="bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 relative shadow-2xl transition-all duration-300 transform scale-95 mx-4 max-h-[90vh] overflow-y-auto">
+            <button id="modal-close"
+                class="absolute top-5 right-5 text-[#8aab90] hover:text-[#f5efe6] font-display text-4xl leading-none">&times;</button>
+            <h3 id="modal-title" class="font-display text-3xl font-extrabold uppercase mb-6 tracking-tight">Add New
+                Sensor Node</h3>
+
+            <form id="node-form" class="space-y-4 font-mono-data text-xs">
+                <input type="hidden" id="edit-node-id-orig">
+                <div>
+                    <label class="block text-muted-foreground uppercase mb-1.5">Sensor ID (e.g. A3)</label>
+                    <input type="text" id="node-id" required
+                        class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none uppercase">
+                </div>
+                <div>
+                    <label class="block text-muted-foreground uppercase mb-1.5">Plot Name</label>
+                    <input type="text" id="node-plot" required
+                        class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-muted-foreground uppercase mb-1.5">Crop Type</label>
+                        <select id="node-crop"
+                            class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                            <option value="Maize">Maize</option>
+                            <option value="Beans">Beans</option>
+                            <option value="Sorghum">Sorghum</option>
+                            <option value="Tomato">Tomato</option>
+                            <option value="Cassava">Cassava</option>
+                            <option value="Matooke">Matooke</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-muted-foreground uppercase mb-1.5">Sensor Depth</label>
+                        <select id="node-depth"
+                            class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                            <option value="15 cm">15 cm</option>
+                            <option value="20 cm">20 cm</option>
+                            <option value="30 cm">30 cm</option>
+                            <option value="45 cm">45 cm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-muted-foreground uppercase mb-1.5">Plot Area</label>
+                        <input type="text" id="node-area" placeholder="e.g. 0.4 ha"
+                            class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-muted-foreground uppercase mb-1.5">Threshold Moisture (%)</label>
+                        <input type="number" id="node-threshold" min="10" max="90" required
+                            class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-muted-foreground uppercase mb-1.5">Target Moisture (%)</label>
+                    <input type="number" id="node-target" min="20" max="95" required
+                        class="w-full bg-[#0c1e13] border border-white/10 rounded-lg p-2.5 text-[#f5efe6] focus:border-primary focus:outline-none">
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit"
+                        class="w-full py-3 bg-primary hover:bg-[#45a072] text-[#0a1c11] uppercase font-bold text-center rounded-lg shadow-md transition-all text-xs tracking-wider">Save
+                        Node Node Configuration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Boot Scripts Placeholder -->
+    <script>
+        // Constants
+        const IRRIGATE_RATE = 3.2;          // % per tick when irrigating
+        const LITRES_PER_TICK = 18;         // litres consumed per irrigating sensor per tick
+        const MANUAL_LITRES_PER_TICK = 32;  // manual flooding estimate
+        const TICK_MS = { 1: 3000, 3: 1000, 10: 300 };
+
+        let logIdCounter = 1000;
+
+        // Helper to generate log entry
+        function mkLog(type, message, sensorId = null) {
+            return {
+                id: String(logIdCounter++),
+                timestamp: new Date(),
+                type,
+                message,
+                sensorId
+            };
+        }
+
+        // Default configuration for sensors
+        const initialSensors = [
+            { id: 'A1', plot: 'Plot A1', crop: 'Maize', depth: '30 cm', area: '0.4 ha', moisture: 62, temp: 24.3, battery: 87, status: 'optimal', mode: 'auto', irrigating: false, threshold: 50, targetMoisture: 68, history: Array(24).fill(62), online: true, signalStrength: 88 },
+            { id: 'A2', plot: 'Plot A2', crop: 'Maize', depth: '30 cm', area: '0.4 ha', moisture: 28, temp: 26.1, battery: 91, status: 'critical', mode: 'auto', irrigating: true, threshold: 50, targetMoisture: 68, history: Array(24).fill(28), online: true, signalStrength: 74 },
+            { id: 'B1', plot: 'Plot B1', crop: 'Beans', depth: '20 cm', area: '0.25 ha', moisture: 71, temp: 23.8, battery: 64, status: 'optimal', mode: 'auto', irrigating: false, threshold: 55, targetMoisture: 72, history: Array(24).fill(71), online: true, signalStrength: 95 },
+            { id: 'B4', plot: 'Plot B4', crop: 'Beans', depth: '20 cm', area: '0.25 ha', moisture: 45, temp: 25.0, battery: 42, status: 'low', mode: 'auto', irrigating: false, threshold: 55, targetMoisture: 72, history: Array(24).fill(45), online: true, signalStrength: 61 },
+            { id: 'C1', plot: 'Plot C1', crop: 'Sorghum', depth: '45 cm', area: '0.6 ha', moisture: 55, temp: 24.7, battery: 78, status: 'optimal', mode: 'auto', irrigating: false, threshold: 45, targetMoisture: 60, history: Array(24).fill(55), online: true, signalStrength: 82 },
+            { id: 'C2', plot: 'Plot C2', crop: 'C2', cropName: 'Sorghum', depth: '45 cm', area: '0.6 ha', moisture: 38, temp: 25.4, battery: 55, status: 'low', mode: 'auto', irrigating: false, threshold: 45, targetMoisture: 60, history: Array(24).fill(38), online: true, signalStrength: 70 },
+        ];
+
+        // Wait, let's fix C2 crop name to Match React and prevent inconsistency
+        initialSensors[5].crop = 'Sorghum';
+        delete initialSensors[5].cropName;
+
+        const initialState = {
+            sensors: initialSensors,
+            log: [
+                mkLog('system', 'System online. 6/6 sensors connected via LoRa network.'),
+                mkLog('alert', 'Plot A2 moisture critically low (28%). Auto-irrigation activated.', 'A2'),
+                mkLog('info', 'Plot B4 moisture below threshold (45%). Scheduled irrigation at 18:00.', 'B4')
+            ],
+            tick: 0,
+            speed: 1,
+            totalWaterUsed: 0,
+            manualWaterEstimate: 0,
+            lastSyncAt: new Date(),
+            paused: false
+        };
+
+        // State object
+        let state = { ...initialState };
+
+        // Load from LocalStorage
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('mazaosmart_sim_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    parsed.lastSyncAt = new Date(parsed.lastSyncAt);
+                    if (Array.isArray(parsed.log)) {
+                        parsed.log = parsed.log.map(entry => ({
+                            ...entry,
+                            timestamp: new Date(entry.timestamp)
+                        }));
+                    }
+                    state = parsed;
+                }
+            } catch (err) {
+                console.error('Failed to load state from localStorage', err);
+            }
+        }
+
+        // Save to LocalStorage
+        function saveState() {
+            try {
+                localStorage.setItem('mazaosmart_sim_state', JSON.stringify(state));
+            } catch (err) {
+                console.error('Failed to save state to localStorage', err);
+            }
+        }
+
+        function statusFor(moisture, online) {
+            if (!online) return 'offline';
+            if (moisture < 30) return 'critical';
+            if (moisture < 50) return 'low';
+            return 'optimal';
+        }
+
+        function DRAIN_RATE(crop) {
+            if (crop === 'Beans') return 1.0;
+            if (crop === 'Maize') return 0.85;
+            return 0.65;
+        }
+
+        function simulateTick() {
+            const newLog = [];
+            let waterUsed = 0;
+            let manualEst = 0;
+
+            state.sensors = state.sensors.map(s => {
+                if (!s.online) return s;
+
+                // Moisture dynamics
+                const jitter = (Math.random() - 0.5) * 0.4;
+                let newMoisture = s.moisture;
+
+                if (s.irrigating) {
+                    newMoisture = Math.min(s.moisture + IRRIGATE_RATE + jitter, 95);
+                    waterUsed += LITRES_PER_TICK;
+                } else {
+                    newMoisture = Math.max(s.moisture - DRAIN_RATE(s.crop) + jitter, 5);
+                }
+                newMoisture = Math.round(newMoisture * 10) / 10;
+
+                // Temperature fluctuation
+                const newTemp = Math.round((s.temp + (Math.random() - 0.5) * 0.3) * 10) / 10;
+
+                // Battery slow drain
+                const newBattery = Math.max(s.battery - 0.05 - (s.irrigating ? 0.08 : 0), 0);
+
+                // Signal strength jitter
+                const newSignal = Math.min(100, Math.max(20, s.signalStrength + (Math.random() - 0.5) * 4));
+
+                // Auto irrigation logic
+                let irrigating = s.irrigating;
+                if (s.mode === 'auto') {
+                    if (!irrigating && newMoisture < s.threshold) {
+                        irrigating = true;
+                        newLog.push(mkLog('action', `Auto-irrigation started on ${s.plot} (moisture ${newMoisture.toFixed(0)}% < ${s.threshold}% threshold)`, s.id));
+                    } else if (irrigating && newMoisture >= s.targetMoisture) {
+                        irrigating = false;
+                        newLog.push(mkLog('info', `Irrigation complete on ${s.plot}. Moisture at ${newMoisture.toFixed(0)}%. Valve closed.`, s.id));
+                    }
+                }
+
+                // Alert generation
+                const prevStatus = s.status;
+                const newStatus = statusFor(newMoisture, s.online);
+                if (prevStatus !== 'critical' && newStatus === 'critical') {
+                    newLog.push(mkLog('alert', `⚠️ ALERT: ${s.plot} moisture dropped to ${newMoisture.toFixed(0)}% — critical level!`, s.id));
+                    showToast(`Critical Moisture Alert`, `${s.plot} moisture dropped to ${newMoisture.toFixed(0)}%!`, 'alert');
+                }
+                if (newBattery < 20 && s.battery >= 20) {
+                    newLog.push(mkLog('alert', `🔋 ${s.plot} sensor battery low (${newBattery.toFixed(0)}%).`, s.id));
+                    showToast(`Battery Alert`, `${s.plot} battery is critically low!`, 'alert');
+                }
+
+                // History: rotate
+                const newHistory = [...s.history.slice(1), Math.round(newMoisture)];
+
+                if (s.irrigating && s.mode === 'manual') {
+                    manualEst += MANUAL_LITRES_PER_TICK;
+                }
+
+                return {
+                    ...s,
+                    moisture: newMoisture,
+                    temp: newTemp,
+                    battery: Math.round(newBattery * 10) / 10,
+                    signalStrength: Math.round(newSignal),
+                    status: newStatus,
+                    irrigating,
+                    history: newHistory
+                };
+            });
+
+            state.tick += 1;
+            state.log = [...newLog, ...state.log].slice(0, 80);
+            state.totalWaterUsed = Math.round((state.totalWaterUsed + waterUsed) * 10) / 10;
+            state.manualWaterEstimate = Math.round((state.manualWaterEstimate + manualEst) * 10) / 10;
+            state.lastSyncAt = new Date();
+
+            saveState();
+            updateUI();
+        }
+
+        // Interval reference
+        let intervalId = null;
+
+        function startInterval(speed) {
+            if (intervalId) clearInterval(intervalId);
+            const delay = TICK_MS[speed] || 3000;
+            intervalId = setInterval(() => {
+                if (!state.paused) {
+                    simulateTick();
+                }
+            }, delay);
+        }
+
+        function initSimulationClock() {
+            if (state.paused) {
+                if (intervalId) clearInterval(intervalId);
+                return;
+            }
+            startInterval(state.speed);
+        }
+
+        // Toast manager
+        function showToast(title, message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 flex flex-col gap-1 `;
+
+            let borderCol, bgCol, textCol;
+            if (type === 'alert') {
+                borderCol = 'border-destructive/30';
+                bgCol = 'bg-destructive/10';
+                textCol = 'text-destructive';
+            } else if (type === 'action') {
+                borderCol = 'border-primary/30';
+                bgCol = 'bg-primary/5';
+                textCol = 'text-primary';
+            } else {
+                borderCol = 'border-[#8aab90]/30';
+                bgCol = 'bg-card/95';
+                textCol = 'text-[#c8c0b0]';
+            }
+
+            toast.className += `${borderCol} ${bgCol}`;
+            toast.innerHTML = `
+        <div class="flex justify-between items-start">
+          <span class="font-display font-bold uppercase tracking-wider text-xs ${textCol}">${title}</span>
+          <button class="text-muted-foreground hover:text-white leading-none text-sm">&times;</button>
+        </div>
+        <p class="text-xs text-[#c8c0b0]">${message}</p>
+      `;
+
+            // Close handler
+            toast.querySelector('button').onclick = () => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            };
+
+            container.appendChild(toast);
+
+            // Animate entry
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+                toast.classList.add('opacity-100', 'translate-y-0');
+            }, 50);
+
+            // Auto dismiss
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // Modal Operations
+        function openNodeModal(nodeId = null) {
+            const modal = document.getElementById('node-modal');
+            const form = document.getElementById('node-form');
+            const title = document.getElementById('modal-title');
+            const idInput = document.getElementById('node-id');
+            const origInput = document.getElementById('edit-node-id-orig');
+
+            form.reset();
+
+            if (nodeId) {
+                // Edit mode
+                const s = state.sensors.find(item => item.id === nodeId);
+                if (!s) return;
+                title.innerText = `Edit Node Configuration: ${s.id}`;
+                idInput.value = s.id;
+                idInput.disabled = true;
+                origInput.value = s.id;
+
+                document.getElementById('node-plot').value = s.plot;
+                document.getElementById('node-crop').value = s.crop;
+                document.getElementById('node-depth').value = s.depth;
+                document.getElementById('node-area').value = s.area;
+                document.getElementById('node-threshold').value = s.threshold;
+                document.getElementById('node-target').value = s.targetMoisture;
+            } else {
+                // Create mode
+                title.innerText = 'Add New Sensor Node';
+                idInput.value = '';
+                idInput.disabled = false;
+                origInput.value = '';
+
+                // Populate standard guesses
+                const nextLetter = String.fromCharCode(65 + Math.floor(state.sensors.length / 2));
+                const nextNum = (state.sensors.length % 2) + 1;
+                const guessId = `${nextLetter}${nextNum}`;
+                idInput.value = guessId;
+                document.getElementById('node-plot').value = `Plot ${guessId}`;
+                document.getElementById('node-threshold').value = 50;
+                document.getElementById('node-target').value = 70;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 50);
+        }
+
+        function closeNodeModal() {
+            const modal = document.getElementById('node-modal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Circular Gauge renderer
+        function renderMoistureGauge(value, size = 80) {
+            const radius = (size / 2) * 0.78;
+            const circumference = 2 * Math.PI * radius;
+            const arcLength = circumference * 0.75;
+            const offset = arcLength * (1 - Math.min(100, Math.max(0, value)) / 100);
+            const color = value < 30 ? '#e05a4e' : (value < 50 ? '#e8a042' : '#4caf7d');
+
+            return `
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform: rotate(135deg);" class="mx-auto">
+          <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" fill="none" stroke="rgba(245,239,230,0.08)" stroke-width="${size * 0.085}" stroke-dasharray="${arcLength} ${circumference - arcLength}" stroke-linecap="round" />
+          <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" fill="none" stroke="${color}" stroke-width="${size * 0.085}" stroke-dasharray="${Math.max(0, arcLength - offset)} ${circumference - Math.max(0, arcLength - offset)}" stroke-linecap="round" style="transition: stroke-dasharray 0.8s ease, stroke 0.5s ease" />
+        </svg>
+      `;
+        }
+
+        // Sparkline renderer
+        function renderSparkline(data, width = 120, height = 32, color = '#4caf7d') {
+            if (!data || data.length < 2) {
+                return `<span class="text-[10px] text-muted-foreground font-mono-data">No history</span>`;
+            }
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = (max - min) || 1;
+
+            const pts = data.map((v, i) => {
+                const x = (i / (data.length - 1)) * width;
+                const y = height - ((v - min) / range) * (height - 4) - 2;
+                return `${x},${y}`;
+            });
+
+            const area = [
+                `0,${height}`,
+                ...pts,
+                `${width},${height}`
+            ].join(' ');
+
+            const colorHex = color.replace('#', '');
+            const lastPt = pts[pts.length - 1].split(',');
+            const lastX = lastPt[0];
+            const lastY = lastPt[1];
+
+            return `
+        <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible;" class="w-full">
+          <defs>
+            <linearGradient id="sg-${colorHex}-${Math.random().toString(36).substr(2, 4)}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${color}" stop-opacity="0.25" />
+              <stop offset="100%" stop-color="${color}" stop-opacity="0.02" />
+            </linearGradient>
+          </defs>
+          <polygon points="${area}" fill="url(#sg-${colorHex})" />
+          <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="${lastX}" cy="${lastY}" r="2" fill="${color}" />
+        </svg>
+      `;
+        }
+
+        // Map plot configuration matching plot_layout in React
+        const PLOT_LAYOUT = [
+            { id: 'A1', col: 2, row: 1, span: 2 },
+            { id: 'A2', col: 4, row: 1, span: 2 },
+            { id: 'B1', col: 1, row: 2, span: 2 },
+            { id: 'B4', col: 3, row: 2, span: 2 },
+            { id: 'C1', col: 1, row: 3, span: 3 },
+            { id: 'C2', col: 4, row: 3, span: 2 }
+        ];
+
+        const statusStyle = {
+            optimal: { fill: 'rgba(76,175,125,0.18)', border: 'rgba(76,175,125,0.6)', text: '#4caf7d' },
+            low: { fill: 'rgba(232,160,66,0.18)', border: 'rgba(232,160,66,0.6)', text: '#e8a042' },
+            critical: { fill: 'rgba(224,90,78,0.22)', border: 'rgba(224,90,78,0.7)', text: '#e05a4e' },
+            offline: { fill: 'rgba(138,171,144,0.08)', border: 'rgba(138,171,144,0.3)', text: '#8aab90' }
+        };
+
+        let hoveredNodeId = null;
+        let activeViewMode = '2d';
+        let activeNodeId = 'A1';
+        let threeSceneInstance = null;
+
+        let threeScene = null;
+        let threeCamera = null;
+        let threeRenderer = null;
+        let threeControls = null;
+        let threeModelGroup = null;
+        let threeGhLed = null;
+        let threeOfLed = null;
+        let threePumpLed = null;
+        let threeRelaySwitch = null;
+        let threeConsoleLed = null;
+
+        let threeDrops = [];
+        let threeFlowIndicator = null;
+        let threePwrPulse = null;
+        let threeTelPulse = null;
+        let threeCtrlPulse = null;
+
+        let threePwrT = 0;
+        let threeTelT = 0;
+        let threeCtrlT = 0;
+        let threeFlowT = 0;
+
+        const solarToHousePts = [[-2.8, 1.4, -2.7], [-2.8, 1.2, -2.7], [-2.0, 0.8, -2.7]];
+        const ghSensorWirePts = [[-2.5, 0.58, 1.8], [-2.5, 0.15, 1.8], [-2.5, 0.15, -0.4], [-2.0, 0.5, -2.0]];
+        const ofSensorWirePts = [[2.5, 0.58, 1.8], [2.5, 0.15, 1.8], [2.5, 0.15, -0.4], [-2.0, 0.4, -2.0]];
+        const serverToRelayWirePts = [[-2.0, 0.5, -2.5], [-2.0, 0.1, -2.5], [2.3, 0.1, -2.5], [2.3, 0.15, -2.4]];
+
+        function getPointOnLine(pts, t) {
+            const numSegments = pts.length - 1;
+            const segment = Math.min(Math.floor(t * numSegments), numSegments - 1);
+            const rem = (t * numSegments) - segment;
+            const p1 = new THREE.Vector3(pts[segment][0], pts[segment][1], pts[segment][2]);
+            const p2 = new THREE.Vector3(pts[segment + 1][0], pts[segment + 1][1], pts[segment + 1][2]);
+            return new THREE.Vector3().lerpVectors(p1, p2, rem);
+        }
+
+        // Field Map Renderer
+        function updateFieldMap() {
+            const mapContainer = document.getElementById('field-map-container');
+            if (!mapContainer) return;
+
+            const sensorMap = {};
+            state.sensors.forEach(s => { sensorMap[s.id] = s; });
+
+            // Dynamically calculate grid boundaries
+            const layout = [...PLOT_LAYOUT];
+            const extraSensors = state.sensors.filter(s => !PLOT_LAYOUT.some(p => p.id === s.id));
+
+            let nextRow = 4;
+            let nextCol = 1;
+
+            extraSensors.forEach(s => {
+                if (!layout.some(l => l.row === 1 && l.col === 1)) {
+                    layout.push({ id: s.id, col: 1, row: 1, span: 1 });
+                } else if (!layout.some(l => l.row === 2 && l.col === 5)) {
+                    layout.push({ id: s.id, col: 5, row: 2, span: 1 });
+                } else {
+                    layout.push({ id: s.id, col: nextCol, row: nextRow, span: 2 });
+                    nextCol += 2;
+                    if (nextCol > 4) {
+                        nextCol = 1;
+                        nextRow += 1;
+                    }
+                }
+            });
+
+            const maxRow = Math.max(3, ...layout.map(l => l.row));
+
+            let gridItems = '';
+            layout.forEach(p => {
+                const s = sensorMap[p.id];
+                if (!s) return;
+                const cfg = statusStyle[s.status] || statusStyle.offline;
+                const isHover = hoveredNodeId === p.id;
+                const bgVal = isHover ? cfg.fill.replace('0.18', '0.32').replace('0.08', '0.15') : cfg.fill;
+                const scale = isHover ? 'scale-105' : 'scale-100';
+
+                gridItems += `
+          <div
+            data-node-id="${p.id}"
+            class="transition-all duration-300 relative overflow-hidden flex flex-col justify-between p-3 cursor-pointer rounded-lg select-none"
+            style="
+              grid-column: ${p.col} / span ${p.span};
+              grid-row: ${p.row} / span 1;
+              background-color: ${bgVal};
+              border: 1.5px solid ${cfg.border};
+              transform: ${isHover ? 'scale(1.03)' : 'scale(1)'};
+            "
+            onclick="scrollToSensorCard('${p.id}'); selectActiveNode('${p.id}');"
+            onmouseenter="setHoveredNode('${p.id}')"
+            onmouseleave="setHoveredNode(null)"
+          >
+            <!-- Moisture fill bottom overlay -->
+            <div class="absolute bottom-0 left-0 right-0 pointer-events-none transition-all duration-1000" style="height: ${s.moisture}%; background-color: ${cfg.text}06;"></div>
+
+            <div class="relative flex justify-between items-start z-10">
+              <div>
+                <div class="text-[10px] font-bold tracking-wider font-mono-data" style="color: ${cfg.text}">${p.id}</div>
+                <div class="text-[9px] text-[#8aab90] mt-0.5">${s.crop}</div>
+              </div>
+              ${s.irrigating ? `<div class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_#4caf7d] animate-pulse"></div>` : ''}
+            </div>
+
+            <div class="relative text-center z-10">
+              <div class="w-1.5 h-1.5 rounded-full mx-auto mb-2" style="background-color: ${cfg.text}; box-shadow: 0 0 ${s.online ? '6px' : '2px'} ${cfg.text}"></div>
+              <div class="font-display font-bold text-xl text-[#f5efe6] leading-none mb-1">
+                ${s.online ? `${s.moisture.toFixed(0)}%` : '—'}
+              </div>
+            </div>
+          </div>
+        `;
+            });
+
+            // Tooltip HTML
+            let tooltipHtml = '';
+            if (hoveredNodeId) {
+                const s = sensorMap[hoveredNodeId];
+                if (s) {
+                    const cfg = statusStyle[s.status] || statusStyle.offline;
+                    tooltipHtml = `
+            <div class="absolute bottom-4 right-4 bg-background/95 border border-primary/20 rounded-xl p-4 text-xs text-[#c8c0b0] shadow-2xl backdrop-blur-md z-30 min-w-[150px]">
+              <div class="font-bold text-[#f5efe6] mb-1.5 font-display text-sm tracking-wide uppercase">${s.plot} &mdash; ${s.crop}</div>
+              <div class="space-y-1 font-mono-data">
+                <div>Moisture: <span style="color: ${cfg.text}; font-weight: bold;">${s.online ? s.moisture.toFixed(1) + '%' : 'OFFLINE'}</span></div>
+                <div>Temp: <span>${s.online ? s.temp.toFixed(1) + '&deg;C' : '—'}</span></div>
+                <div>Status: <span style="color: ${cfg.text}">${s.status.toUpperCase()}</span></div>
+                <div>Valve: <span class="${s.irrigating ? 'text-primary font-bold' : 'text-muted-foreground'}">${s.irrigating ? 'OPEN &middot; IRRIGATING' : 'CLOSED'}</span></div>
+              </div>
+            </div>
+          `;
+                }
+            }
+
+            // Check if section is already rendered
+            const existingSection = document.getElementById('field-map');
+            if (existingSection) {
+                // Just update changing elements
+                const gridElem = document.getElementById('map-view-2d-grid');
+                if (gridElem) gridElem.innerHTML = gridItems;
+                const tooltipElem = document.getElementById('map-tooltip-container');
+                if (tooltipElem) tooltipElem.innerHTML = tooltipHtml;
+
+                // Keep classes sync
+                updateToggleButtonsClass();
+
+                if (activeViewMode === '3d') {
+                    update3DTelemetry();
+                }
+                return;
+            }
+
+            // Render full section
+            mapContainer.innerHTML = `
+        <section id="field-map" class="bg-[#0c1e13] py-20 border-b border-white/5 font-sans">
+          <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              
+              <!-- Left info columns -->
+              <div>
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-6 h-[1px] bg-accent"></div>
+                  <span class="font-mono-data text-[10px] tracking-[0.2em] text-accent uppercase">Spatial Overview &middot; Live</span>
+                </div>
+                <h2 class="font-display text-4xl md:text-5xl font-extrabold uppercase tracking-tight text-[#f5efe6] leading-none mb-6">
+                  Telemetry Field Map
+                </h2>
+                <p class="text-[#c8c0b0] text-sm md:text-base leading-relaxed mb-6 font-sans">
+                  Each physical plot shows live soil moisture telemetry. Transmitted via low-power LoRa links to the base station. Tap any plot to configure nodes or manually override solenoid valves.
+                </p>
+
+                <div class="grid grid-cols-2 gap-3.5 mb-8 text-xs">
+                  <div class="flex items-center gap-3"><div class="w-3.5 h-3.5 rounded bg-primary/20 border border-primary"></div><span class="text-[#c8c0b0]">Optimal (50-80%)</span></div>
+                  <div class="flex items-center gap-3"><div class="w-3.5 h-3.5 rounded bg-accent/20 border border-accent"></div><span class="text-[#c8c0b0]">Low Moisture (30-50%)</span></div>
+                  <div class="flex items-center gap-3"><div class="w-3.5 h-3.5 rounded bg-destructive/20 border border-destructive"></div><span class="text-[#c8c0b0]">Critical Crisis (<30%)</span></div>
+                  <div class="flex items-center gap-3"><div class="w-3.5 h-3.5 rounded bg-[#8aab90]/10 border border-[#8aab90]/40"></div><span class="text-[#c8c0b0]">Telemetry Offline</span></div>
+                </div>
+
+                <div class="bg-[#162e1e] border border-white/5 rounded-xl p-5 grid grid-cols-2 gap-6">
+                  <div>
+                    <span class="text-[9px] font-mono-data uppercase text-[#8aab90] tracking-widest block mb-1">Estate Owner</span>
+                    <span class="text-sm font-semibold text-[#f5efe6]">Amina Nabwire</span>
+                  </div>
+                  <div>
+                    <span class="text-[9px] font-mono-data uppercase text-[#8aab90] tracking-widest block mb-1">Plot Location</span>
+                    <span class="text-sm font-semibold text-[#f5efe6]">Mbarara, Uganda</span>
+                  </div>
+                  <div>
+                    <span class="text-[9px] font-mono-data uppercase text-[#8aab90] tracking-widest block mb-1">Total Estate Area</span>
+                    <span class="text-sm font-semibold text-[#f5efe6]">2.5 Hectares</span>
+                  </div>
+                  <div>
+                    <span class="text-[9px] font-mono-data uppercase text-[#8aab90] tracking-widest block mb-1">Connected Links</span>
+                    <span class="text-sm font-semibold text-[#f5efe6]">${state.sensors.filter(s => s.online).length} / ${state.sensors.length} Nodes</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Grid map graphic or 3D Model -->
+              <div class="relative">
+                <div class="flex justify-between items-center mb-3">
+                  <div class="flex bg-[#162e1e] border border-white/10 rounded-lg p-0.5 pointer-events-auto z-20">
+                    <button id="toggle-map-2d" onclick="toggleMapView('2d', event)" class="px-2.5 py-1 rounded text-[10px] font-mono-data uppercase font-bold transition-all duration-200">2D Grid</button>
+                    <button id="toggle-map-3d" onclick="toggleMapView('3d', event)" class="px-2.5 py-1 rounded text-[10px] font-mono-data uppercase font-bold transition-all duration-200">3D Farm</button>
+                  </div>
+                  
+                  <div class="flex items-center gap-1.5 text-[10px] font-mono-data text-[#8aab90]">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="stroke-current">
+                      <circle cx="12" cy="12" r="10" stroke-width="1.5" opacity="0.2"/>
+                      <path d="M12 4l2 5H10l2-5zm0 16l-2-5h4l-2 5z" fill="currentColor"/>
+                    </svg>
+                    <span>GRID NORTH</span>
+                  </div>
+                </div>
+
+                <div class="relative bg-card/40 border border-primary/10 rounded-2xl p-6 min-h-[350px] flex items-center justify-center overflow-hidden">
+                  <!-- Radar Sweep effect -->
+                  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(76,175,125,0.02),transparent)] pointer-events-none"></div>
+                  
+                  <!-- 2D View container -->
+                  <div id="map-view-2d" class="w-full flex items-center justify-center">
+                    <div id="map-view-2d-grid" class="grid gap-2.5 w-auto" style="
+                      grid-template-columns: repeat(5, 80px);
+                      grid-template-rows: repeat(${maxRow}, 80px);
+                    ">
+                      ${gridItems}
+                    </div>
+                  </div>
+
+                  <!-- 3D View container -->
+                  <div id="map-view-3d" class="hidden w-full h-[340px] rounded-xl overflow-hidden relative z-10"></div>
+
+                  <!-- Hover values tooltip container -->
+                  <div id="map-tooltip-container" class="pointer-events-none">
+                    ${tooltipHtml}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+      `;
+
+            updateToggleButtonsClass();
+        }
+
+        function updateToggleButtonsClass() {
+            const btn2d = document.getElementById('toggle-map-2d');
+            const btn3d = document.getElementById('toggle-map-3d');
+            if (activeViewMode === '2d') {
+                if (btn2d) btn2d.className = "px-2.5 py-1 rounded text-[10px] font-mono-data opacity-90 uppercase font-bold transition-all duration-200 bg-primary text-[#0a1c11]";
+                if (btn3d) btn3d.className = "px-2.5 py-1 rounded text-[10px] font-mono-data opacity-90 uppercase font-bold transition-all duration-200 text-[#8aab90] hover:text-white";
+            } else {
+                if (btn2d) btn2d.className = "px-2.5 py-1 rounded text-[10px] font-mono-data opacity-90 uppercase font-bold transition-all duration-200 text-[#8aab90] hover:text-white";
+                if (btn3d) btn3d.className = "px-2.5 py-1 rounded text-[10px] font-mono-data opacity-90 uppercase font-bold transition-all duration-200 bg-primary text-[#0a1c11]";
+            }
+        }
+
+        function toggleMapView(mode, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            activeViewMode = mode;
+
+            const view2d = document.getElementById('map-view-2d');
+            const view3d = document.getElementById('map-view-3d');
+
+            updateToggleButtonsClass();
+
+            if (mode === '3d') {
+                if (view2d) view2d.classList.add('hidden');
+                if (view3d) view3d.classList.remove('hidden');
+
+                if (!threeSceneInstance) {
+                    initThreeDFarm();
+                } else {
+                    update3DTelemetry();
+                }
+            } else {
+                if (view2d) view2d.classList.remove('hidden');
+                if (view3d) view3d.classList.add('hidden');
+            }
+        }
+
+        function initThreeDFarm() {
+            const container = document.getElementById('map-view-3d');
+            if (!container) return;
+
+            if (typeof THREE === 'undefined') {
+                container.innerHTML = '<div class="text-accent font-mono text-xs text-center py-20">Three.js is loading... Please refresh.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            function createWirePath(pts, color) {
+                const curvePts = pts.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+                const curve = new THREE.CatmullRomCurve3(curvePts);
+                const geom = new THREE.TubeGeometry(curve, 16, 0.012, 4, false);
+                const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+                const mesh = new THREE.Mesh(geom, mat);
+                threeModelGroup.add(mesh);
+            }
+
+            // HUD Floating panel
+            const hud = document.createElement('div');
+            hud.className = 'absolute top-3 left-3 bg-background/85 border border-primary/25 rounded-xl p-2.5 text-[10px] font-mono-data text-[#c8c0b0] shadow-xl backdrop-blur-md z-30 min-w-[130px] select-none pointer-events-none';
+            hud.innerHTML = `
+                <div class="font-bold text-[#f5efe6] mb-1 font-display text-xs tracking-wide uppercase select-none">3D TELEMETRY HEADS-UP</div>
+                <div>Node Target: <span id="hud-node-id" class="text-primary font-bold">A1</span></div>
+                <div>Moisture: <span id="hud-node-moisture" class="font-bold">--%</span></div>
+                <div>Irrigation: <span id="hud-node-valve" class="font-bold">--</span></div>
+            `;
+            container.appendChild(hud);
+
+            threeScene = new THREE.Scene();
+            threeScene.fog = new THREE.FogExp2(0x0f2318, 0.015);
+
+            const w = container.clientWidth || 500;
+            const h = container.clientHeight || 340;
+            threeCamera = new THREE.PerspectiveCamera(40, w / h, 0.1, 100);
+
+            // Camera position restore
+            const camX = localStorage.getItem('agrisense_cam_x3_vanilla');
+            const camY = localStorage.getItem('agrisense_cam_y3_vanilla');
+            const camZ = localStorage.getItem('agrisense_cam_z3_vanilla');
+            if (camX && camY && camZ) {
+                threeCamera.position.set(parseFloat(camX), parseFloat(camY), parseFloat(camZ));
+            } else {
+                threeCamera.position.set(8, 7, 10);
+            }
+
+            threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            threeRenderer.setSize(w, h);
+            threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            threeRenderer.shadowMap.enabled = true;
+            container.appendChild(threeRenderer.domElement);
+
+            threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+            threeControls.enableDamping = true;
+            threeControls.dampingFactor = 0.05;
+            threeControls.maxPolarAngle = Math.PI / 2 - 0.05;
+            threeControls.minDistance = 3;
+            threeControls.maxDistance = 25;
+            threeControls.target.set(0, 0.5, 0);
+            threeControls.update();
+
+            threeControls.addEventListener('change', () => {
+                localStorage.setItem('agrisense_cam_x3_vanilla', threeCamera.position.x);
+                localStorage.setItem('agrisense_cam_y3_vanilla', threeCamera.position.y);
+                localStorage.setItem('agrisense_cam_z3_vanilla', threeCamera.position.z);
+            });
+
+            // Lights
+            const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+            threeScene.add(ambient);
+
+            const dirLight = new THREE.DirectionalLight(0xfff5ea, 0.95);
+            dirLight.position.set(10, 15, 5);
+            dirLight.castShadow = true;
+            threeScene.add(dirLight);
+
+            threeModelGroup = new THREE.Group();
+            threeScene.add(threeModelGroup);
+
+            // Build elements
+            // Ground
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x142b1b, roughness: 0.9 });
+            const ground = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 8), groundMat);
+            ground.position.y = -0.1;
+            ground.receiveShadow = true;
+            threeModelGroup.add(ground);
+
+            // Greenhouse Soil (left)
+            const ghSoil = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.2, 4.8), new THREE.MeshStandardMaterial({ color: 0x271912, roughness: 0.95 }));
+            ghSoil.position.set(-2.5, 0.1, 0.5);
+            ghSoil.receiveShadow = true;
+            threeModelGroup.add(ghSoil);
+
+            // Outfield Soil (right)
+            const ofSoil = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.2, 4.8), new THREE.MeshStandardMaterial({ color: 0x3d2719, roughness: 0.95 }));
+            ofSoil.position.set(2.5, 0.1, 0.5);
+            ofSoil.receiveShadow = true;
+            threeModelGroup.add(ofSoil);
+
+            // Greenhouse structural dome
+            const ghGlassMat = new THREE.MeshStandardMaterial({
+                color: 0x0ea5e9,
+                transparent: true,
+                opacity: 0.12,
+                roughness: 0.05,
+                metalness: 0.2,
+                side: THREE.DoubleSide
+            });
+            const ghStructure = new THREE.Mesh(new THREE.BoxGeometry(3.8, 1.8, 5.0), ghGlassMat);
+            ghStructure.position.set(-2.5, 0.9, 0.5);
+            threeModelGroup.add(ghStructure);
+
+            const frameEdges = new THREE.EdgesGeometry(ghStructure.geometry);
+            const frameLines = new THREE.LineSegments(frameEdges, new THREE.LineBasicMaterial({ color: 0x5a7b62 }));
+            frameLines.position.set(-2.5, 0.9, 0.5);
+            threeModelGroup.add(frameLines);
+
+            const roofGeom = new THREE.CylinderGeometry(1.9, 1.9, 5.0, 12, 1, false, 0, Math.PI);
+            const roof = new THREE.Mesh(roofGeom, ghGlassMat);
+            roof.rotation.x = Math.PI / 2;
+            roof.position.set(-2.5, 1.8, 0.5);
+            threeModelGroup.add(roof);
+
+            const roofEdges = new THREE.EdgesGeometry(roofGeom);
+            const roofFrames = new THREE.LineSegments(roofEdges, new THREE.LineBasicMaterial({ color: 0x5a7b62 }));
+            roofFrames.rotation.x = Math.PI / 2;
+            roofFrames.position.set(-2.5, 1.8, 0.5);
+            threeModelGroup.add(roofFrames);
+
+            // Server house
+            const serverHouse = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.2, 1.6), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 }));
+            serverHouse.position.set(-2.8, 0.6, -2.8);
+            serverHouse.castShadow = true;
+            threeModelGroup.add(serverHouse);
+
+            const serverRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 1.8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+            serverRoof.position.set(-2.8, 1.25, -2.8);
+            threeModelGroup.add(serverRoof);
+
+            threeConsoleLed = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.05), new THREE.MeshBasicMaterial({ color: 0x0ea5e9 }));
+            threeConsoleLed.position.set(-2.2, 0.7, -1.98);
+            threeModelGroup.add(threeConsoleLed);
+
+            // Solar Panel setup
+            const solarPanel = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 1.0), new THREE.MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.8, roughness: 0.15 }));
+            solarPanel.rotation.x = -Math.PI / 8;
+            solarPanel.position.set(-2.8, 1.45, -2.7);
+            threeModelGroup.add(solarPanel);
+
+            const solarStand = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+            solarStand.position.set(-2.8, 1.35, -2.7);
+            threeModelGroup.add(solarStand);
+
+            // Water tank cylindrical reservoir tower
+            const tankStand = new THREE.Group();
+            for (let i = -1; i <= 1; i += 2) {
+                for (let j = -1; j <= 1; j += 2) {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6 }));
+                    leg.position.set(2.8 + i * 0.4, 0.6, -2.8 + j * 0.4);
+                    tankStand.add(leg);
+                }
+            }
+            threeModelGroup.add(tankStand);
+
+            const waterTank = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.6, 16), new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.2 }));
+            waterTank.position.set(2.8, 1.7, -2.8);
+            waterTank.castShadow = true;
+            threeModelGroup.add(waterTank);
+
+            const tankCap = new THREE.Mesh(new THREE.TorusGeometry(0.61, 0.03, 8, 24), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+            tankCap.rotation.x = Math.PI / 2;
+            tankCap.position.set(2.8, 2.0, -2.8);
+            threeModelGroup.add(tankCap);
+
+            // Pipelines
+            const pipeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
+            const mainDownPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2), pipeMat);
+            mainDownPipe.position.set(2.8, 0.6, -2.8);
+            threeModelGroup.add(mainDownPipe);
+
+            const forwardPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4), pipeMat);
+            forwardPipe.rotation.x = Math.PI / 2;
+            forwardPipe.position.set(2.8, 0.15, -1.6);
+            threeModelGroup.add(forwardPipe);
+
+            const splitPipeLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 5.6), pipeMat);
+            splitPipeLeft.rotation.z = Math.PI / 2;
+            splitPipeLeft.position.set(0, 0.15, -0.4);
+            threeModelGroup.add(splitPipeLeft);
+
+            const ghUpPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0), pipeMat);
+            ghUpPipe.position.set(-2.5, 0.65, -0.4);
+            threeModelGroup.add(ghUpPipe);
+
+            const ghEmitterPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.8), pipeMat);
+            ghEmitterPipe.rotation.x = Math.PI / 2;
+            ghEmitterPipe.position.set(-2.5, 1.15, 0.5);
+            threeModelGroup.add(ghEmitterPipe);
+
+            const ofUpPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8), pipeMat);
+            ofUpPipe.position.set(2.5, 0.55, -0.4);
+            threeModelGroup.add(ofUpPipe);
+
+            const ofEmitterPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.8), pipeMat);
+            ofEmitterPipe.rotation.x = Math.PI / 2;
+            ofEmitterPipe.position.set(2.5, 0.95, 0.5);
+            threeModelGroup.add(ofEmitterPipe);
+
+            // Relay and Pump
+            const relay = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.28), new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 }));
+            relay.position.set(2.3, 0.13, -2.4);
+            threeModelGroup.add(relay);
+
+            threeRelaySwitch = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.5 }));
+            threeRelaySwitch.position.set(2.3, 0.20, -2.4);
+            threeModelGroup.add(threeRelaySwitch);
+
+            const pumpGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 12);
+            const pump = new THREE.Mesh(pumpGeo, new THREE.MeshStandardMaterial({ color: 0x0f766e, metalness: 0.5, roughness: 0.3 }));
+            pump.rotation.x = Math.PI / 2;
+            pump.position.set(2.8, 0.2, -2.4);
+            threeModelGroup.add(pump);
+
+            const pumpBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.25), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+            pumpBase.position.set(2.8, 0.04, -2.4);
+            threeModelGroup.add(pumpBase);
+
+            threePumpLed = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+            threePumpLed.position.set(2.8, 0.33, -2.4);
+            threeModelGroup.add(threePumpLed);
+
+            // Coffee / Matooke plants in Greenhouse
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.65 });
+            const stalkMat = new THREE.MeshStandardMaterial({ color: 0x1f2937 });
+            const ghPlantGroup = new THREE.Group();
+            for (let z = -1.2; z <= 1.8; z += 1.0) {
+                const plant = new THREE.Group();
+                plant.position.set(-2.5, 0.2, z);
+
+                const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.4), stalkMat);
+                stalk.position.y = 0.2;
+                plant.add(stalk);
+
+                const leafGeo = new THREE.SphereGeometry(0.12, 6, 6);
+                leafGeo.scale(1.8, 0.2, 0.7);
+                for (let l = 0; l < 4; l++) {
+                    const leaf = new THREE.Mesh(leafGeo, leafMat);
+                    leaf.position.set(0, 0.38, 0);
+                    leaf.rotation.y = (Math.PI / 2) * l + Math.random() * 0.15;
+                    leaf.rotation.z = 0.25;
+                    plant.add(leaf);
+                }
+                ghPlantGroup.add(plant);
+            }
+            threeModelGroup.add(ghPlantGroup);
+
+            // Maize plants in Outfield
+            const outfieldPlantGroup = new THREE.Group();
+            const maizeMat = new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: 0.7 });
+            const cobMat = new THREE.MeshStandardMaterial({ color: 0xeab308 });
+            for (let xOff = -0.5; xOff <= 0.5; xOff += 1.0) {
+                for (let z = -1.2; z <= 1.8; z += 1.0) {
+                    const plant = new THREE.Group();
+                    plant.position.set(2.5 + xOff, 0.2, z + Math.random() * 0.1);
+
+                    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.65), maizeMat);
+                    stalk.position.y = 0.325;
+                    plant.add(stalk);
+
+                    const leafCone = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.25, 5), maizeMat);
+                    leafCone.position.set(0, 0.55, 0);
+                    leafCone.rotation.x = 0.18;
+                    plant.add(leafCone);
+
+                    const cob = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 6), cobMat);
+                    cob.position.set(0.035, 0.32, 0.035);
+                    cob.rotation.z = 0.45;
+                    plant.add(cob);
+
+                    outfieldPlantGroup.add(plant);
+                }
+            }
+            threeModelGroup.add(outfieldPlantGroup);
+
+            // Sensor probes
+            const stakeGeo = new THREE.BoxGeometry(0.06, 0.5, 0.06);
+            const stakeMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.1 });
+
+            const ghStake = new THREE.Mesh(stakeGeo, stakeMat);
+            ghStake.position.set(-2.5, 0.3, 1.8);
+            threeModelGroup.add(ghStake);
+
+            threeGhLed = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+            threeGhLed.position.set(-2.5, 0.58, 1.8);
+            threeModelGroup.add(threeGhLed);
+
+            const ofStake = new THREE.Mesh(stakeGeo, stakeMat);
+            ofStake.position.set(2.5, 0.3, 1.8);
+            threeModelGroup.add(ofStake);
+
+            threeOfLed = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+            threeOfLed.position.set(2.5, 0.58, 1.8);
+            threeModelGroup.add(threeOfLed);
+
+            // Wire conduits
+            createWirePath(solarToHousePts, 0xeab308);
+            createWirePath(ghSensorWirePts, 0x10b981);
+            createWirePath(ofSensorWirePts, 0x10b981);
+            createWirePath(serverToRelayWirePts, 0x8b5cf6);
+            createWirePath([[2.3, 0.2, -2.4], [2.8, 0.2, -2.4]], 0x0f172a);
+
+            // Signal pulses
+            threePwrPulse = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
+            threeModelGroup.add(threePwrPulse);
+
+            threeTelPulse = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+            threeModelGroup.add(threeTelPulse);
+
+            threeCtrlPulse = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), new THREE.MeshBasicMaterial({ color: 0x8b5cf6 }));
+            threeModelGroup.add(threeCtrlPulse);
+
+            threeFlowIndicator = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), new THREE.MeshBasicMaterial({ color: 0x2563eb }));
+            threeModelGroup.add(threeFlowIndicator);
+
+            // Drip rain particles
+            const maxDrops = 16;
+            const dropGeo = new THREE.SphereGeometry(0.018, 4, 4);
+            const dropMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+            threeDrops = [];
+            for (let i = 0; i < maxDrops; i++) {
+                const d = new THREE.Mesh(dropGeo, dropMat);
+                d.visible = false;
+                d.velocity = -0.06 - Math.random() * 0.05;
+                d.age = -i * 5;
+                threeModelGroup.add(d);
+                threeDrops.push(d);
+            }
+
+            // Animation loop
+            const clock = new THREE.Clock();
+            let lastBlink = 0;
+            threeSceneInstance = true;
+
+            function animate() {
+                if (activeViewMode !== '3d') {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+
+                requestAnimationFrame(animate);
+
+                const delta = clock.getDelta();
+                const elapsed = clock.getElapsedTime();
+
+                if (threeControls) threeControls.update();
+
+                if (threeModelGroup) {
+                    threeModelGroup.rotation.y = elapsed * 0.04;
+                }
+
+                if (elapsed - lastBlink > 0.4) {
+                    if (threeConsoleLed) threeConsoleLed.visible = !threeConsoleLed.visible;
+                    lastBlink = elapsed;
+                }
+
+                // Solar current pulses
+                threePwrT += 0.85 * delta;
+                if (threePwrT > 1) threePwrT = 0;
+                threePwrPulse.position.copy(getPointOnLine(solarToHousePts, threePwrT));
+
+                // Telemetry packets from active zone
+                threeTelT += 0.45 * delta;
+                if (threeTelT > 1) threeTelT = 0;
+
+                const activeNode = state.sensors.find(s => s.id === activeNodeId) || state.sensors[0];
+                const isGH = activeNode && activeNode.id.startsWith('C');
+
+                if (isGH) {
+                    threeTelPulse.position.copy(getPointOnLine(ghSensorWirePts, threeTelT));
+                } else {
+                    threeTelPulse.position.copy(getPointOnLine(ofSensorWirePts, threeTelT));
+                }
+
+                const isValveOpen = activeNode && activeNode.irrigating;
+                if (isValveOpen) {
+                    if (threePumpLed) {
+                        threePumpLed.material.color.setHex(0x22c55e);
+                        const scale = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(elapsed * 12));
+                        threePumpLed.scale.setScalar(scale);
+                    }
+                    if (threeRelaySwitch) {
+                        threeRelaySwitch.material.color.setHex(0x22c55e);
+                    }
+
+                    // Control signal pulses
+                    threeCtrlT += 0.9 * delta;
+                    if (threeCtrlT > 1) threeCtrlT = 0;
+                    threeCtrlPulse.visible = true;
+                    threeCtrlPulse.position.copy(getPointOnLine(serverToRelayWirePts, threeCtrlT));
+
+                    // Water pipeline visual flow
+                    threeFlowT += 0.7 * delta;
+                    if (threeFlowT > 1) threeFlowT = 0;
+                    threeFlowIndicator.visible = true;
+                    if (isGH) {
+                        const path = [[2.8, 1.2, -2.8], [2.8, 0.15, -2.8], [2.8, 0.15, -0.4], [-2.5, 0.15, -0.4], [-2.5, 1.15, -0.4]];
+                        threeFlowIndicator.position.copy(getPointOnLine(path, threeFlowT));
+                    } else {
+                        const path = [[2.8, 1.2, -2.8], [2.8, 0.15, -2.8], [2.8, 0.15, -0.4], [2.5, 0.15, -0.4], [2.5, 0.95, -0.4]];
+                        threeFlowIndicator.position.copy(getPointOnLine(path, threeFlowT));
+                    }
+
+                    // Irrigation rain emitter positioning
+                    const emitterX = isGH ? -2.5 : 2.5;
+                    const emitterY = isGH ? 1.15 : 0.95;
+                    threeDrops.forEach(d => {
+                        d.age += 1;
+                        if (d.age > 0) {
+                            d.visible = true;
+                            d.position.y += d.velocity * 5 * delta;
+                            if (d.position.y <= 0.2) {
+                                d.position.set(emitterX, emitterY - 0.05, -1.2 + Math.random() * 3.0);
+                            }
+                        }
+                    });
+                } else {
+                    if (threePumpLed) {
+                        threePumpLed.material.color.setHex(0xef4444);
+                        threePumpLed.scale.setScalar(1.0);
+                    }
+                    if (threeRelaySwitch) {
+                        threeRelaySwitch.material.color.setHex(0xd97706);
+                    }
+                    threeCtrlPulse.visible = false;
+                    threeFlowIndicator.visible = false;
+                    threeDrops.forEach(d => d.visible = false);
+                }
+
+                if (threeRenderer && threeScene && threeCamera) {
+                    threeRenderer.render(threeScene, threeCamera);
+                }
+            }
+
+            animate();
+
+            // Populates HUD immediately
+            update3DTelemetry();
+        }
+
+        function update3DTelemetry() {
+            // Find active sensor node
+            const sensor = state.sensors.find(s => s.id === activeNodeId) || state.sensors[0];
+            if (!sensor) return;
+
+            // Update HUD elements
+            const hudNode = document.getElementById('hud-node-id');
+            const hudMoisture = document.getElementById('hud-node-moisture');
+            const hudValve = document.getElementById('hud-node-valve');
+
+            if (hudNode) hudNode.innerText = sensor.id;
+            if (hudMoisture) hudMoisture.innerText = sensor.online ? `${sensor.moisture.toFixed(1)}%` : 'OFFLINE';
+            if (hudValve) {
+                hudValve.innerText = sensor.irrigating ? 'IDLE (DRIPPING)' : 'CLOSED';
+                if (sensor.irrigating) {
+                    hudValve.innerText = 'ON (ACTIVE)';
+                    hudValve.className = 'text-primary font-bold';
+                } else {
+                    hudValve.innerText = 'OFF (CLOSED)';
+                    hudValve.className = 'text-[#8aab90] font-bold';
+                }
+            }
+
+            // Update LED lights based on moisture limits
+            const valC1 = state.sensors.find(s => s.id === 'C1');
+            const valA2 = state.sensors.find(s => s.id === 'A2') || state.sensors.find(s => s.id === 'A1');
+
+            function getLEDColorHex(s) {
+                if (!s || !s.online) return 0x8aab90; // gray
+                if (s.moisture > 55) return 0x22c55e; // Green
+                if (s.moisture > 35) return 0xeab308; // Yellow
+                return 0xef4444; // Red
+            }
+
+            if (threeGhLed && valC1) {
+                threeGhLed.material.color.setHex(getLEDColorHex(valC1));
+            }
+            if (threeOfLed && valA2) {
+                threeOfLed.material.color.setHex(getLEDColorHex(valA2));
+            }
+        }
+
+        function selectActiveNode(id) {
+            activeNodeId = id;
+            if (threeSceneInstance) {
+                update3DTelemetry();
+            }
+        }
+
+        function setHoveredNode(nodeId) {
+            hoveredNodeId = nodeId;
+            updateFieldMap();
+        }
+
+        function scrollToSensorCard(id) {
+            const card = document.getElementById(`sensor-card-${id}`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Brief pulse highlight animation on card
+                card.classList.add('ring-2', 'ring-primary', 'shadow-2xl');
+                setTimeout(() => {
+                    card.classList.remove('ring-2', 'ring-primary', 'shadow-2xl');
+                }, 1500);
+            }
+        }
+
+        // High level UI update dispatch
+        function updateUI() {
+            // 1. Update Navigation Bar values if any
+            // 2. Update Hero stats
+            const avgMoisture = state.sensors.filter(s => s.online).reduce((acc, curr) => acc + curr.moisture, 0) / (state.sensors.filter(s => s.online).length || 1);
+            document.getElementById('kpi-avg-moisture').innerText = `${avgMoisture.toFixed(1)}%`;
+            document.getElementById('kpi-water').innerText = `${state.totalWaterUsed.toFixed(0)} L`;
+            document.getElementById('kpi-valves').innerText = `${state.sensors.filter(s => s.irrigating).length} / ${state.sensors.length}`;
+
+            // 3. Update simulation control buttons
+            const toggleBtn = document.getElementById('sim-toggle-pause');
+            if (toggleBtn) {
+                if (state.paused) {
+                    toggleBtn.innerHTML = `<span>Resume Simulation</span>`;
+                    toggleBtn.className = toggleBtn.className.replace('bg-primary', 'bg-accent').replace('hover:bg-[#45a072]', 'hover:bg-[#df963c]').replace('text-[#0a1c11]', 'text-background');
+                } else {
+                    toggleBtn.innerHTML = `<span>Pause Simulation</span>`;
+                    toggleBtn.className = toggleBtn.className.replace('bg-accent', 'bg-primary').replace('hover:bg-[#df963c]', 'hover:bg-[#45a072]').replace('text-background', 'text-[#0a1c11]');
+                }
+            }
+
+            // Highlight active speed
+            [1, 3, 10].forEach(sp => {
+                const btn = document.getElementById(`sim-speed-${sp}`);
+                if (btn) {
+                    if (state.speed === sp) {
+                        btn.classList.add('bg-card/90', 'text-white', 'border', 'border-white/5');
+                        btn.classList.remove('bg-card/10', 'text-[#8aab90]');
+                    } else {
+                        btn.classList.remove('bg-card/90', 'text-white', 'border', 'border-white/5');
+                        btn.classList.add('bg-card/10', 'text-[#8aab90]');
+                    }
+                }
+            });
+            // 4. Update sections
+            updateFieldMap();
+            updateSensorsList();
+            updateEventLog();
+        }
+
+        // Render Sensor Nodes Cards
+        function updateSensorsList() {
+            const container = document.getElementById('sensors-control-container');
+            if (!container) return;
+
+            let cardGridHtml = '';
+
+            state.sensors.forEach(s => {
+                const isOffline = !s.online;
+                const statusCfg = statusStyle[s.status] || statusStyle.offline;
+                const isOptimal = s.status === 'optimal';
+                const isLow = s.status === 'low';
+                const isCritical = s.status === 'critical';
+
+                // Set status badge colors
+                let statusBadge = '';
+                if (isOffline) {
+                    statusBadge = `<span class="bg-[#8aab90]/10 text-[#8aab90] border border-[#8aab90]/25 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-data uppercase">Offline</span>`;
+                } else if (isOptimal) {
+                    statusBadge = `<span class="bg-[#4caf7d]/10 text-primary border border-primary/25 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-data uppercase">Optimal</span>`;
+                } else if (isLow) {
+                    statusBadge = `<span class="bg-[#e8a042]/10 text-accent border border-accent/25 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-data uppercase">Low Moisture</span>`;
+                } else if (isCritical) {
+                    statusBadge = `<span class="bg-[#e05a4e]/10 text-destructive border border-destructive/25 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider font-mono-data uppercase animate-pulse">Critical</span>`;
+                }
+
+                cardGridHtml += `
+          <div
+            id="sensor-card-${s.id}"
+            onclick="selectActiveNode('${s.id}')"
+            class="bg-card/60 border border-white/5 hover:border-primary/20 rounded-2xl p-6 relative overflow-hidden backdrop-blur-md transition-all duration-300 flex flex-col justify-between cursor-pointer"
+          >
+            <!-- Card Background Glow on Irrigating -->
+            ${s.irrigating ? `<div class="absolute -inset-[1px] bg-gradient-to-br from-primary/10 to-transparent rounded-2xl pointer-events-none -z-10"></div>` : ''}
+
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-6">
+              <div>
+                <span class="text-[10px] font-mono-data text-primary font-bold uppercase tracking-wider block mb-1">LoRa NODE ${s.id}</span>
+                <h3 class="font-display text-2xl font-bold uppercase text-[#f5efe6]">${s.plot}</h3>
+              </div>
+              <div class="flex flex-col gap-1 items-end">
+                ${statusBadge}
+                <span class="text-[9px] font-mono-data text-muted-foreground uppercase mt-1 tracking-wider">${s.crop} &middot; ${s.depth}</span>
+              </div>
+            </div>
+
+            <!-- Visual Indicators: circular gauge and history sparkline -->
+            <div class="grid grid-cols-2 gap-4 items-center border-y border-white/5 py-4 mb-6">
+              <div class="text-center relative">
+                ${renderMoistureGauge(isOffline ? 0 : s.moisture, 80)}
+                <div class="absolute inset-0 flex flex-col justify-center items-center">
+                  <span class="font-display text-xl font-bold text-[#f5efe6] -mt-1">${isOffline ? '—' : s.moisture.toFixed(0) + '%'}</span>
+                  <span class="text-[8px] font-mono-data text-[#8aab90] uppercase tracking-wider -mt-1">Moisture</span>
+                </div>
+              </div>
+              <div class="flex flex-col justify-center gap-1.5 h-full">
+                <span class="text-[9px] font-mono-data text-muted-foreground uppercase tracking-widest block mb-0.5">24h history</span>
+                <div class="w-full bg-[#0c1e13]/60 border border-white/5 p-1 px-1.5 rounded-lg h-9 flex items-center">
+                  ${renderSparkline(isOffline ? [] : s.history, 120, 24, statusCfg.text)}
+                </div>
+                <div class="flex justify-between text-[8px] font-mono-data mt-0.5 text-[#8aab90]/65 uppercase">
+                  <span>-24h</span>
+                  <span>Now</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats Rows -->
+            <div class="grid grid-cols-3 gap-2.5 text-center mb-6 font-mono-data text-[10px] bg-[#0c1e13]/40 p-2.5 rounded-xl border border-white/5">
+              <div>
+                <span class="text-[8px] text-muted-foreground uppercase block mb-1">Soil Temp</span>
+                <span class="font-bold text-[#d0c9b8]">${isOffline ? '—' : s.temp.toFixed(1) + '&deg;C'}</span>
+              </div>
+              <div>
+                <span class="text-[8px] text-muted-foreground uppercase block mb-1">Battery</span>
+                <span class="font-bold cursor-pointer" style="color: ${s.battery < 20 ? '#e05a4e' : '#f5efe6'}" onclick="rechargeSensorNode('${s.id}')">
+                  ${s.battery.toFixed(0)}%
+                </span>
+              </div>
+              <div>
+                <span class="text-[8px] text-muted-foreground uppercase block mb-1">LORA RSSI</span>
+                <span class="font-bold text-[#8aab90]">${isOffline ? '—' : '-' + s.signalStrength.toFixed(0) + ' dBm'}</span>
+              </div>
+            </div>
+
+            <!-- Operational controls -->
+            <div class="space-y-4">
+              <!-- Valve controls -->
+              <div class="flex justify-between items-center bg-[#0c1e13]/85 p-3 rounded-lg border border-white/5">
+                <div>
+                  <span class="text-[9px] font-mono-data text-[#8aab90] uppercase block">Valves Solenoid</span>
+                  <span class="text-[11px] font-bold uppercase ${s.irrigating ? 'text-primary' : 'text-[#8aab90]/65'}">
+                    ${s.irrigating ? 'OPEN &middot; Flowing' : 'CLOSED'}
+                  </span>
+                </div>
+                <button
+                  onclick="toggleValveState('${s.id}')"
+                  ${isOffline ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1.5 border border-white/10 bg-transparent text-muted-foreground rounded text-[10px] uppercase font-mono-data font-bold"' : ''}
+                  class="px-3.5 py-1.5 text-[10px] font-mono-data font-bold uppercase transition-all rounded shadow-md border ${s.irrigating
+                        ? 'bg-destructive/10 border-destructive text-destructive hover:bg-destructive/20'
+                        : 'bg-primary border-primary hover:bg-[#45a072] text-[#0a1c11]'
+                    }"
+                >
+                  ${s.irrigating ? 'Shut Valve' : 'Force Open'}
+                </button>
+              </div>
+
+              <!-- Mode select -->
+              <div class="flex justify-between items-center bg-[#0c1e13]/85 p-3 rounded-lg border border-white/5">
+                <div>
+                  <span class="text-[9px] font-mono-data text-[#8aab90] uppercase block">Irrigation Mode</span>
+                  <span class="text-[11px] font-bold uppercase ${s.mode === 'auto' ? 'text-primary' : 'text-accent'}">
+                    ${s.mode === 'auto' ? 'Automatic (Smart)' : 'Manual Override'}
+                  </span>
+                </div>
+                <button
+                  onclick="changeSensorMode('${s.id}')"
+                  ${isOffline ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1.5 border border-white/10 bg-transparent text-muted-foreground rounded text-[10px] uppercase font-mono-data font-bold"' : ''}
+                  class="px-3 py-1.5 text-[10px] font-mono-data font-bold uppercase transition-all bg-card/85 text-[#8aab90] hover:text-[#f5efe6] border border-white/10 rounded"
+                >
+                  To ${s.mode === 'auto' ? 'Manual' : 'Smart'}
+                </button>
+              </div>
+
+              <!-- Node status controls -->
+              <div class="flex justify-between items-center border-t border-white/5 pt-4 mt-2">
+                <button
+                  onclick="toggleOnlineState('${s.id}')"
+                  class="text-[10px] font-mono-data font-bold uppercase py-1 border-b ${isOffline ? 'border-primary text-primary hover:text-white' : 'border-destructive text-destructive hover:text-white'} transition-all"
+                >
+                  ${isOffline ? 'Connect Node' : 'Disable Telemetry'}
+                </button>
+
+                <div class="flex gap-4">
+                  <button
+                    onclick="openNodeModal('${s.id}')"
+                    class="text-[10px] font-mono-data uppercase text-[#8aab90] hover:text-white font-bold"
+                  >
+                    Edit Config
+                  </button>
+                  <button
+                    onclick="deleteSensorNode('${s.id}')"
+                    class="text-[10px] font-mono-data uppercase text-destructive/60 hover:text-destructive font-bold"
+                  >
+                    Delete Node
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        `;
+            });
+
+            // Append add new card block
+            cardGridHtml += `
+        <div
+          class="border-2 border-dashed border-white/10 hover:border-primary/40 rounded-2xl p-6 min-h-[300px] flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-350 hover:bg-[#0c1e13]/10"
+          onclick="openNodeModal()"
+        >
+          <div class="w-12 h-12 rounded-full border border-white/10 hover:border-primary/50 text-[#8aab90] hover:text-primary flex items-center justify-center font-display text-4xl mb-4 leading-none select-none transition-colors">
+            +
+          </div>
+          <span class="font-display text-xl font-bold uppercase text-[#f5efe6] tracking-wide">Add New Telemetry Node</span>
+          <p class="text-xs text-muted-foreground font-sans max-w-[200px] mt-2 leading-relaxed">
+            Attach another digital moisture sensor node to the local LoRa hub base station.
+          </p>
+        </div>
+      `;
+
+            container.innerHTML = `
+        <section id="sensors-section" class="bg-background py-20 border-b border-white/5">
+          <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="flex justify-between items-end mb-12 flex-wrap gap-6">
+              <div>
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-6 h-[1px] bg-accent"></div>
+                  <span class="font-mono-data text-[10px] tracking-[0.2em] text-accent uppercase">Estate Telemetry Controls</span>
+                </div>
+                <h2 class="font-display text-4xl md:text-5xl font-extrabold uppercase tracking-tight text-[#f5efe6] leading-none">
+                  Active Telemetry Nodes
+                </h2>
+              </div>
+              <button
+                onclick="openNodeModal()"
+                class="px-5 py-3 rounded-lg bg-primary hover:bg-[#45a072] text-[#0a1c11] uppercase font-bold text-xs tracking-wider transition-all shadow-md font-mono-data"
+              >
+                + Register New LoRa Node
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6.5">
+              ${cardGridHtml}
+            </div>
+          </div>
+        </section>
+      `;
+        }
+
+        // Render Event Activity Log
+        function updateEventLog() {
+            const container = document.getElementById('event-log-container');
+            if (!container) return;
+
+            const logTypes = {
+                alert: { color: '#e05a4e', bg: 'rgba(224,90,78,0.1)', icon: '⚠' },
+                info: { color: '#8aab90', bg: 'rgba(138,171,144,0.08)', icon: 'ℹ' },
+                action: { color: '#4caf7d', bg: 'rgba(76,175,125,0.1)', icon: '▶' },
+                system: { color: '#e8a042', bg: 'rgba(232,160,66,0.08)', icon: '◈' }
+            };
+
+            let rowsHtml = '';
+            state.log.slice(0, 40).forEach((entry, i) => {
+                const t = logTypes[entry.type] || logTypes.info;
+                const timeStr = entry.timestamp.toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const isHighlight = i === 0 ? 'bg-primary/[0.04]' : 'bg-transparent';
+
+                rowsHtml += `
+          <div class="grid grid-cols-[90px_60px_1fr_80px] gap-2.5 px-6 py-3.5 border-b border-white/5 transition-all text-[#c8c0b0] hover:bg-white/5 ${isHighlight} items-center">
+            <span class="font-mono-data text-[11px] text-[#8aab90]">${timeStr}</span>
+            <span class="text-[10px] font-bold rounded px-1.5 py-0.5 tracking-wider uppercase text-center w-fit text-xs flex items-center gap-1 font-mono-data" style="color: ${t.color}; background-color: ${t.bg}">
+              <span>${t.icon}</span><span>${entry.type}</span>
+            </span>
+            <span class="text-xs text-[#f5efe6] font-sans leading-relaxed">${entry.message}</span>
+            <span class="font-mono-data text-[11px] text-primary font-semibold text-right">${entry.sensorId || '—'}</span>
+          </div>
+        `;
+            });
+
+            container.innerHTML = `
+        <section id="event-log" class="bg-[#0c1e13] py-20">
+          <div class="max-w-7xl mx-auto px-6 md:px-12">
+            <div class="flex justify-between items-end mb-8 flex-wrap gap-6">
+              <div>
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-6 h-[1px] bg-accent"></div>
+                  <span class="font-mono-data text-[10px] tracking-[0.2em] text-accent uppercase">System Activity</span>
+                </div>
+                <h2 class="font-display text-4xl md:text-5xl font-extrabold uppercase tracking-tight text-[#f5efe6] leading-none">
+                  Event Activity Log
+                </h2>
+              </div>
+              <div class="flex items-center gap-6 font-mono-data">
+                <div class="flex items-center gap-2 text-xs">
+                  <div class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></div>
+                  <span class="text-primary font-bold">LIVE &middot; TICK #${state.tick}</span>
+                </div>
+                <button
+                  onclick="clearEventLogs()"
+                  class="px-3.5 py-1.5 border border-destructive/20 hover:border-destructive text-destructive font-bold uppercase rounded text-[10px] transition-all bg-card/30"
+                >
+                  Clear History
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-card/40 border border-white/5 rounded-2xl overflow-hidden shadow-xl">
+              <!-- Table Headers -->
+              <div class="grid grid-cols-[90px_60px_1fr_80px] gap-2.5 px-6 py-3 bg-[#112419] border-b border-white/10 text-[9px] font-mono-data text-[#8aab90] tracking-widest uppercase">
+                <span>Time</span>
+                <span>Type</span>
+                <span>Event details</span>
+                <span class="text-right">Sensor</span>
+              </div>
+
+              <!-- Log Rows container -->
+              <div class="max-h-[380px] overflow-y-auto divide-y divide-white/5">
+                ${state.log.length === 0 ? `
+                  <div class="px-6 py-12 text-center text-xs text-muted-foreground font-mono-data uppercase">
+                    No system log entries recorded
+                  </div>
+                ` : rowsHtml}
+              </div>
+
+              <!-- Table Footer -->
+              <div class="bg-[#112419] px-6 py-3 border-t border-white/10 flex justify-between items-center text-[10px] font-mono-data text-muted-foreground uppercase tracking-wider">
+                <span>Recorded events this session: ${state.log.length}</span>
+                <span>Regional Hub: MBARARA-HUB-01</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+        }
+
+        // Interactive Action callbacks
+        window.changeSensorMode = function (id) {
+            state.sensors = state.sensors.map(s => {
+                if (s.id === id) {
+                    const nextMode = s.mode === 'auto' ? 'manual' : 'auto';
+                    state.log = [mkLog('action', `Sensor ${id} switched to ${nextMode} mode`, id), ...state.log].slice(0, 80);
+                    showToast(`Sensor Mode Switch`, `${s.plot} switched to ${nextMode} mode.`, 'info');
+                    return { ...s, mode: nextMode };
+                }
+                return s;
+            });
+            saveState();
+            updateUI();
+        };
+
+        window.toggleValveState = function (id) {
+            state.sensors = state.sensors.map(s => {
+                if (s.id === id) {
+                    const nextValve = !s.irrigating;
+                    state.log = [mkLog('action', `${nextValve ? 'Started' : 'Stopped'} manual irrigation on ${s.plot}`, id), ...state.log].slice(0, 80);
+                    showToast(`Valve SOLENOID Override`, `${nextValve ? 'Opened' : 'Closed'} valve on ${s.plot}. Mode switched to Manual.`, 'action');
+                    return { ...s, irrigating: nextValve, mode: 'manual' };
+                }
+                return s;
+            });
+            saveState();
+            updateUI();
+        };
+
+        window.toggleOnlineState = function (id) {
+            state.sensors = state.sensors.map(s => {
+                if (s.id === id) {
+                    const nextOnline = !s.online;
+                    state.log = [
+                        mkLog(nextOnline ? 'info' : 'alert', `${s.plot} sensor ${nextOnline ? 'reconnected' : 'went offline'}`, id),
+                        ...state.log
+                    ].slice(0, 80);
+                    showToast(`Node Link Override`, `${s.plot} link is now ${nextOnline ? 'ONLINE' : 'OFFLINE'}.`, nextOnline ? 'info' : 'alert');
+                    return {
+                        ...s,
+                        online: nextOnline,
+                        status: statusFor(s.moisture, nextOnline),
+                        irrigating: nextOnline ? s.irrigating : false
+                    };
+                }
+                return s;
+            });
+            saveState();
+            updateUI();
+        };
+
+        window.deleteSensorNode = function (id) {
+            const s = state.sensors.find(item => item.id === id);
+            if (!s) return;
+            if (confirm(`Remove telemetry node ${id} (${s.plot}) from network?`)) {
+                state.sensors = state.sensors.filter(item => item.id !== id);
+                state.log = [
+                    mkLog('system', `Sensor node ${id} removed from network.`, id),
+                    ...state.log
+                ].slice(0, 80);
+                showToast('Network Node Deleted', `${s.plot} has been removed.`, 'alert');
+                saveState();
+                updateUI();
+            }
+        };
+
+        window.rechargeSensorNode = function (id) {
+            state.sensors = state.sensors.map(s => {
+                if (s.id === id) {
+                    showToast('Battery Recharged', `Solar battery levels replenished on ${s.plot}`, 'info');
+                    state.log = [mkLog('system', `Solar panels cleaned. Battery fully recharged to 100% on ${s.plot}`, id), ...state.log].slice(0, 80);
+                    return { ...s, battery: 100 };
+                }
+                return s;
+            });
+            saveState();
+            updateUI();
+        };
+
+        window.clearEventLogs = function () {
+            state.log = [mkLog('system', 'Event log cleared.')];
+            showToast('System Logs Cleared', 'All recorded events removed');
+            saveState();
+            updateUI();
+        };
+
+        // Scenario triggers
+        function triggerDrought() {
+            state.sensors = state.sensors.map(s => ({
+                ...s,
+                moisture: Math.max(s.moisture - 20, 8)
+            }));
+            state.log = [mkLog('system', '🌵 Drought scenario triggered: all plots moisture reduced by 20%.'), ...state.log].slice(0, 80);
+            showToast('Scenario Triggered', 'Drought simulation initiated. Soil moisture dropped by 20% across all plots.', 'alert');
+            saveState();
+            updateUI();
+        }
+
+        function triggerRain() {
+            state.sensors = state.sensors.map(s => ({
+                ...s,
+                moisture: Math.min(s.moisture + 25, 92),
+                irrigating: false
+            }));
+            state.log = [mkLog('system', '🌧 Rainfall event detected: moisture +25% across all plots. Irrigation suspended.'), ...state.log].slice(0, 80);
+            showToast('Rainfall Triggered', 'Heavy rainfall precipitation detected. Solenoid valves closed. Moisture increased by 25%.', 'action');
+            saveState();
+            updateUI();
+        }
+
+        function resetSimulation() {
+            if (confirm("Reset dashboard state back to Ugandan Mbarara project defaults?")) {
+                localStorage.removeItem('mazaosmart_sim_state');
+                state = {
+                    sensors: [
+                        { id: 'A1', plot: 'Plot A1', crop: 'Maize', depth: '30 cm', area: '0.4 ha', moisture: 62, temp: 24.3, battery: 87, status: 'optimal', mode: 'auto', irrigating: false, threshold: 50, targetMoisture: 68, history: Array(24).fill(62), online: true, signalStrength: 88 },
+                        { id: 'A2', plot: 'Plot A2', crop: 'Maize', depth: '30 cm', area: '0.4 ha', moisture: 28, temp: 26.1, battery: 91, status: 'critical', mode: 'auto', irrigating: true, threshold: 50, targetMoisture: 68, history: Array(24).fill(28), online: true, signalStrength: 74 },
+                        { id: 'B1', plot: 'Plot B1', crop: 'Beans', depth: '20 cm', area: '0.25 ha', moisture: 71, temp: 23.8, battery: 64, status: 'optimal', mode: 'auto', irrigating: false, threshold: 55, targetMoisture: 72, history: Array(24).fill(71), online: true, signalStrength: 95 },
+                        { id: 'B4', plot: 'Plot B4', crop: 'Beans', depth: '20 cm', area: '0.25 ha', moisture: 45, temp: 25.0, battery: 42, status: 'low', mode: 'auto', irrigating: false, threshold: 55, targetMoisture: 72, history: Array(24).fill(45), online: true, signalStrength: 61 },
+                        { id: 'C1', plot: 'Plot C1', crop: 'Sorghum', depth: '45 cm', area: '0.6 ha', moisture: 55, temp: 24.7, battery: 78, status: 'optimal', mode: 'auto', irrigating: false, threshold: 45, targetMoisture: 60, history: Array(24).fill(55), online: true, signalStrength: 82 },
+                        { id: 'C2', plot: 'Plot C2', crop: 'Sorghum', depth: '45 cm', area: '0.6 ha', moisture: 38, temp: 25.4, battery: 55, status: 'low', mode: 'auto', irrigating: false, threshold: 45, targetMoisture: 60, history: Array(24).fill(38), online: true, signalStrength: 70 }
+                    ],
+                    log: [
+                        mkLog('system', 'System online. 6/6 sensors connected via LoRa network.'),
+                        mkLog('alert', 'Plot A2 moisture critically low (28%). Auto-irrigation activated.', 'A2'),
+                        mkLog('info', 'Plot B4 moisture below threshold (45%). Scheduled irrigation at 18:00.', 'B4')
+                    ],
+                    tick: 0,
+                    speed: 1,
+                    totalWaterUsed: 0,
+                    manualWaterEstimate: 0,
+                    lastSyncAt: new Date(),
+                    paused: false
+                };
+                saveState();
+                showToast('Dashboard Reset Complete', 'Defaults restored', 'info');
+                initSimulationClock();
+                updateUI();
+            }
+        }
+
+        function exportLogsCSV() {
+            try {
+                let csv = 'Time,Type,Message,Sensor ID\n';
+                state.log.forEach(entry => {
+                    const time = entry.timestamp.toISOString();
+                    const cleanMsg = entry.message.replace(/"/g, '""');
+                    csv += `"${time}","${entry.type}","${cleanMsg}","${entry.sensorId || ''}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `mazaosmart_activity_log_${Date.now()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (err) {
+                showToast('Export failed', err.message, 'alert');
+            }
+        }
+
+        // Modal submit handler
+        document.getElementById('node-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const nodeId = document.getElementById('node-id').value.trim().toUpperCase();
+            const plotName = document.getElementById('node-plot').value.trim();
+            const crop = document.getElementById('node-crop').value;
+            const depth = document.getElementById('node-depth').value;
+            const area = document.getElementById('node-area').value.trim() || '0.4 ha';
+            const threshold = parseInt(document.getElementById('node-threshold').value, 10);
+            const target = parseInt(document.getElementById('node-target').value, 10);
+
+            const editOrigId = document.getElementById('edit-node-id-orig').value;
+
+            if (editOrigId) {
+                // Edit sensor logic
+                state.sensors = state.sensors.map(s => {
+                    if (s.id === editOrigId) {
+                        const updated = {
+                            ...s,
+                            plot: plotName,
+                            crop,
+                            depth,
+                            area,
+                            threshold,
+                            targetMoisture: target,
+                            status: statusFor(s.moisture, s.online)
+                        };
+                        return updated;
+                    }
+                    return s;
+                });
+
+                state.log = [
+                    mkLog('system', `Sensor ${editOrigId} configuration updated.`, editOrigId),
+                    ...state.log
+                ].slice(0, 80);
+
+                showToast('Configuration Updated', `Node ${editOrigId} settings updated successfully.`, 'info');
+            } else {
+                // Create new sensor logic
+                if (state.sensors.some(s => s.id === nodeId)) {
+                    alert(`Sensor ID "${nodeId}" already exists. Please choose a unique ID.`);
+                    return;
+                }
+
+                const newNode = {
+                    id: nodeId,
+                    plot: plotName,
+                    crop,
+                    depth,
+                    area,
+                    moisture: 55,
+                    temp: 24.5,
+                    battery: 100,
+                    status: 'optimal',
+                    mode: 'auto',
+                    irrigating: false,
+                    threshold,
+                    targetMoisture: target,
+                    history: Array(24).fill(55),
+                    online: true,
+                    signalStrength: 95
+                };
+
+                state.sensors.push(newNode);
+                state.log = [
+                    mkLog('system', `Connected new LoRa sensor node ${nodeId} for ${plotName} (${crop}).`, nodeId),
+                    ...state.log
+                ].slice(0, 80);
+
+                showToast('Node Registered', `Added new node ${nodeId} for ${plotName}.`, 'action');
+            }
+
+            saveState();
+            closeNodeModal();
+            updateUI();
+        });
+
+        // Binders
+        document.getElementById('modal-close').addEventListener('click', closeNodeModal);
+        document.getElementById('node-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeNodeModal();
+        });
+
+        document.getElementById('sim-toggle-pause').addEventListener('click', function () {
+            state.paused = !state.paused;
+            state.log = [mkLog('system', `Simulation clock ${state.paused ? 'paused' : 'resumed'}`), ...state.log].slice(0, 80);
+            saveState();
+            initSimulationClock();
+            updateUI();
+        });
+
+        [1, 3, 10].forEach(sp => {
+            document.getElementById(`sim-speed-${sp}`).addEventListener('click', function () {
+                state.speed = sp;
+                state.log = [mkLog('system', `Simulation rate set to speed ${sp}x`), ...state.log].slice(0, 80);
+                saveState();
+                initSimulationClock();
+                updateUI();
+            });
+        });
+
+        document.getElementById('sim-trigger-drought').addEventListener('click', triggerDrought);
+        document.getElementById('sim-trigger-rain').addEventListener('click', triggerRain);
+        document.getElementById('sim-reset').addEventListener('click', resetSimulation);
+        document.getElementById('sim-export-csv').addEventListener('click', exportLogsCSV);
+
+        // Initializer
+        window.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initSimulationClock();
+            updateUI();
+            showToast('System Telemetry Online', 'Connected 6 LoRa slots to base station.', 'info');
+        });
+
+
+
+    </script>
+</body>
+
+</html>

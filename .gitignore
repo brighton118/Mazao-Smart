@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Build output
+dist/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables (contains sensitive keys)
+.env
+
+# Local databases
+users_auth.db
+chroma_db/
+
+# Log and temp files
+*.log
+*.txt
+build_log.txt
+clean_output.txt
+clean_test_call_out.txt
+clean_test_out.txt
+coffee_response.txt
+hardware_response.txt
+output.txt
+test_call_out.txt
+test_out.txt
+tsc_errors.txt
+tsc_errors_utf8.txt
+compile_out.txt
+compile_out_utf8.txt
+dev_output.log
+
+# Simulation state (runtime data)
+soil_moisture_sim_state.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.figma/

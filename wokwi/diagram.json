@@ -1,0 +1,237 @@
+{
+    "version": 1,
+    "author": "AgriSense AI Project",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "wokwi-esp32-devkit-v1",
+            "id": "esp",
+            "top": 150,
+            "left": -20,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht",
+            "top": -90,
+            "left": -120,
+            "attrs": {
+                "temperature": "24",
+                "humidity": "60"
+            }
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "pot",
+            "top": 20,
+            "left": -220,
+            "attrs": {
+                "value": "1800",
+                "label": "Soil Moisture Potentiometer (ADC)"
+            }
+        },
+        {
+            "type": "wokwi-lcd1602",
+            "id": "lcd",
+            "top": -120,
+            "left": 120,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-relay",
+            "id": "relay",
+            "top": 200,
+            "left": 260,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led_pump",
+            "top": 300,
+            "left": 280,
+            "attrs": {
+                "color": "green",
+                "label": "Water Pump Status"
+            }
+        }
+    ],
+    "connections": [
+        [
+            "esp:GND.1",
+            "pot:GND",
+            "black",
+            [
+                "h",
+                -10,
+                "v",
+                0
+            ]
+        ],
+        [
+            "esp:3V3",
+            "pot:VCC",
+            "red",
+            [
+                "h",
+                -20,
+                "v",
+                0
+            ]
+        ],
+        [
+            "esp:D34",
+            "pot:SIG",
+            "orange",
+            [
+                "h",
+                -30,
+                "v",
+                0
+            ]
+        ],
+        [
+            "esp:GND.1",
+            "dht:GND",
+            "black",
+            [
+                "h",
+                -10,
+                "v",
+                -150
+            ]
+        ],
+        [
+            "esp:3V3",
+            "dht:VCC",
+            "red",
+            [
+                "h",
+                -20,
+                "v",
+                -150
+            ]
+        ],
+        [
+            "esp:D15",
+            "dht:SDA",
+            "yellow",
+            [
+                "h",
+                -40,
+                "v",
+                -90
+            ]
+        ],
+        [
+            "esp:GND.2",
+            "lcd:GND",
+            "black",
+            [
+                "v",
+                -80,
+                "h",
+                100
+            ]
+        ],
+        [
+            "esp:5V",
+            "lcd:VCC",
+            "red",
+            [
+                "v",
+                -100,
+                "h",
+                120
+            ]
+        ],
+        [
+            "esp:D21",
+            "lcd:SDA",
+            "blue",
+            [
+                "v",
+                -120,
+                "h",
+                140
+            ]
+        ],
+        [
+            "esp:D22",
+            "lcd:SCL",
+            "yellow",
+            [
+                "v",
+                -140,
+                "h",
+                160
+            ]
+        ],
+        [
+            "esp:GND.2",
+            "relay:GND",
+            "black",
+            [
+                "h",
+                80,
+                "v",
+                80
+            ]
+        ],
+        [
+            "esp:5V",
+            "relay:VCC",
+            "red",
+            [
+                "h",
+                60,
+                "v",
+                60
+            ]
+        ],
+        [
+            "esp:D12",
+            "relay:IN",
+            "purple",
+            [
+                "h",
+                40,
+                "v",
+                40
+            ]
+        ],
+        [
+            "relay:NO",
+            "led_pump:A",
+            "green",
+            [
+                "v",
+                20,
+                "h",
+                -10
+            ]
+        ],
+        [
+            "relay:COM",
+            "esp:5V",
+            "red",
+            [
+                "v",
+                -20,
+                "h",
+                -180
+            ]
+        ],
+        [
+            "esp:GND.2",
+            "led_pump:K",
+            "black",
+            [
+                "h",
+                20,
+                "v",
+                180
+            ]
+        ]
+    ],
+    "dependencies": {}
+}
