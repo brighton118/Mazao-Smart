@@ -46,19 +46,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchUserProfile = async (userId: string, email: string): Promise<User | null> => {
         try {
             // Fetch profile
-            const { data: profile, error: profileErr } = await supabase
+            let { data: profile, error: profileErr } = await supabase
                 .from('users')
                 .select('*')
                 .eq('id', userId)
                 .single()
 
             if (profileErr || !profile) {
-                console.warn('Could not fetch public profile from users table:', profileErr)
-                return null
+                console.warn('Could not fetch public profile from users table, attempting fallback creation:', profileErr)
+
+                // Attempt to auto-create the missing public profile using Auth metadata
+                const { data: { user: authUser } } = await supabase.auth.getUser()
+                if (authUser && authUser.id === userId) {
+                    const meta = authUser.user_metadata || {}
+                    const newProfile = {
+                        id: userId,
+                        email: email || authUser.email,
+                        username: meta.username || (email ? email.split('@')[0] : 'user_' + Math.floor(Math.random() * 1000)),
+                        full_name: meta.full_name || '',
+                        phone: meta.phone || '',
+                        role: meta.role || 'Farmer',
+                        preferred_language: 'en'
+                    }
+
+                    const { error: insertErr } = await supabase.from('users').insert([newProfile])
+
+                    if (!insertErr) {
+                        // Auto-create farm if data exists
+                        if (meta.farm_location || meta.farm_name) {
+                            try {
+                                let dist = 'Mbarara', vill = 'Ruti'
+                                if (typeof meta.farm_location === 'string') {
+                                    try {
+                                        const parsed = JSON.parse(meta.farm_location)
+                                        dist = parsed.district || dist
+                                        vill = parsed.village || vill
+                                    } catch {
+                                        const parts = meta.farm_location.split(',')
+                                        if (parts.length > 0) vill = parts[0].trim()
+                                        if (parts.length > 1) dist = parts[1].trim()
+                                    }
+                                }
+                                await supabase.from('farms').insert([{
+                                    owner_id: userId,
+                                    farm_name: meta.farm_name || 'My Farm',
+                                    district: dist,
+                                    village: vill
+                                }])
+                            } catch (e) {
+                                console.warn('Could not auto-create farm', e)
+                            }
+                        }
+
+                        // Fetch the freshly created profile
+                        const { data: refreshedProfile } = await supabase.from('users').select('*').eq('id', userId).single()
+                        if (refreshedProfile) {
+                            profile = refreshedProfile
+                            profileErr = null
+                        } else {
+                            return null
+                        }
+                    } else {
+                        console.error('Failed to auto-create user profile in public table:', insertErr)
+                        return null
+                    }
+                } else {
+                    return null
+                }
             }
 
             // Fetch farm info if it exists
-            const { data: farms, error: farmErr } = await supabase
+            const { data: farms } = await supabase
                 .from('farms')
                 .select('*')
                 .eq('owner_id', userId)
@@ -264,14 +322,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // If it is a username, query the public.users database to find the email
             if (!email.includes('@')) {
                 try {
-                    const { data } = await supabase
-                        .from('users')
-                        .select('email')
-                        .eq('username', email)
-                        .maybeSingle()
+                    // We must use a Postgres function (RPC) because RLS blocks anonymous read access to public.users
+                    const { data, error: rpcError } = await supabase.rpc('get_email_by_username', { p_username: email })
 
-                    if (data?.email) {
-                        email = data.email
+                    if (!rpcError && data) {
+                        email = Array.isArray(data) ? data[0] : data
                     }
                 } catch (lookupErr) {
                     console.warn('Username lookup failed, trying fallback emails:', lookupErr)
@@ -334,11 +389,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const register = async (data: Partial<User> & { password: string }) => {
+        console.log('--- STARTING SIGNUP FLOW ---')
         try {
             // Check if backend is offline or if using mockup
             const supabasePlaceholder = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
             if (supabasePlaceholder) {
-                // Mock success for offline local environments
+                console.log('[Signup] Offline Mode: Registration simulated successfully.')
                 window.dispatchEvent(
                     new CustomEvent('mazaosmart-toast', {
                         detail: { message: 'Offline Mode: Registration simulated successfully.', type: 'info' }
@@ -365,6 +421,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
+            console.log('[Signup] Calling Supabase auth.signUp with email:', data.email)
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: data.email!,
                 password: data.password,
@@ -384,20 +441,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             })
 
+            console.log('[Signup] Response received.')
+            console.log('[Signup] Data:', authData)
+            console.log('[Signup] Error:', authError)
+
             if (authError) {
+                console.error('[Signup] Error existing from signUp:', authError.message)
                 return { success: false, error: authError.message }
             }
 
+            if (!authData.user || !authData.user.id) {
+                console.error('[Signup] Fake success detected: No user object inside authData despite no error.')
+                return { success: false, error: 'Registration failed silently: User object was missing in the server response.' }
+            }
+
+            console.log(`[Signup] User ID successfully generated: ${authData.user.id}`)
+
+            console.log('[Signup] No manual DB profile insertions required - Supabase PostgreSQL Trigger handles this automatically.');
+
+            console.log('[Signup] Registration logic concluded safely. Triggering success toast.')
             window.dispatchEvent(
                 new CustomEvent('mazaosmart-toast', {
-                    detail: { message: 'Registration succeeded! Please check your email for confirmation.', type: 'success' }
+                    detail: { message: 'Registration succeeded!', type: 'success' }
                 })
             )
 
             return { success: true }
 
         } catch (e: any) {
-            return { success: false, error: e.message || 'Offline register failure.' }
+            console.error('[Signup] Unexpected error occurred:', e)
+            return { success: false, error: e.message || 'Server error during registration.' }
         }
     }
 
@@ -498,7 +571,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    const changePassword = async (current: string, newPass: string) => {
+    const changePassword = async (_current: string, newPass: string) => {
         if (!token) return { success: false, error: 'Unauthorized' }
         if (token.startsWith('offline_')) {
             return { success: true }

@@ -51,7 +51,7 @@ export default function NavBar() {
             className="font-display"
             style={{ fontSize: 20, fontWeight: 700, letterSpacing: '0.04em', color: '#f5efe6' }}
           >
-            MAZAO<span style={{ color: '#4caf7d' }}>SMART</span>
+            AgriSense<span style={{ color: '#4caf7d' }}> Agronomy Experts</span>
           </span>
         </div>
 

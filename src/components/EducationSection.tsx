@@ -282,12 +282,12 @@ export default function EducationSection() {
               onClick={() => {
                 const link = document.createElement('a')
                 link.href = 'data:application/pdf;base64,JVBERi0xLjQKJdDFnzsyIDAgb2JqCjw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAzIDAgUj4+CmVuZG9iagozIDAgb2JqCjw8L1R5cGUvUGFnZXMvS2lkc1s0IDAgUl0vQ291bnQgMT4+CmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9QYXJlbnQgMyAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjUgMCBvYmoKPDwvTGVuZ3RoIDcwPj5zdHJlYW0KQlQKL0YxIDEyIFRmCjcyIDcyIFRkCihNYXphb1NtYXJ0IFNvaWwgTW9pc3R1cmUgTW9uaXRvcmluZyBTeXN0ZW0gLSBNYmFyYXJhIFBpbG90IEZpZWxkIEd1aWRlKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDcwIDA5OTk5IG4gCjAwMDAwMDAxMTEgMDAwMDAgbiAKMDAwMDAwMDE4NSAwMDAwMCBuIAowMDAwMDAwMjg0IDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMzkzCiUlRU9GCg=='
-                link.download = 'MazaoSmart_Mbarara_Field_Guide.pdf'
+                link.download = 'AgriSense_Mbarara_Field_Guide.pdf'
                 link.click()
                 window.dispatchEvent(
                   new CustomEvent('mazaosmart-toast', {
                     detail: {
-                      message: 'MazaoSmart Field Guide (PDF) download started.',
+                      message: 'AgriSense Field Guide (PDF) download started.',
                       type: 'success'
                     }
                   })
@@ -324,7 +324,7 @@ export default function EducationSection() {
           }}
         >
           <span className="font-display" style={{ fontSize: 18, fontWeight: 700, color: '#4caf7d', letterSpacing: '0.04em' }}>
-            MAZAO<span style={{ color: '#8aab90' }}>SMART</span>
+            AgriSense<span style={{ color: '#8aab90' }}> Agronomy Experts</span>
           </span>
           <span className="font-mono-data" style={{ fontSize: 11, color: '#8aab90', letterSpacing: '0.1em' }}>
             PILOT REGION: MBARARA DISTRICT, UGANDA · 2025

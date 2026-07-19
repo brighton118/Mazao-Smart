@@ -38,13 +38,7 @@ export default function SettingsPanel() {
         }
     }, [user])
 
-    if (!user) {
-        return (
-            <div style={{ textAlign: 'center', padding: '48px', color: '#8aab90' }}>
-                <p>Please log in to configure settings.</p>
-            </div>
-        )
-    }
+
 
     const handleClearCache = () => {
         localStorage.removeItem('mazaosmart_sim_state')
@@ -272,19 +266,7 @@ export default function SettingsPanel() {
 
                             <div>
                                 <div style={{ fontSize: '15px', fontWeight: 700, color: '#f5efe6' }}>{user?.full_name || 'AgriSense User'}</div>
-                                <div style={{ fontSize: '11px', color: '#8aab90', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                                    <Shield size={12} style={{ color: '#e8a042' }} />
-                                    <span style={{
-                                        color: '#e8a042',
-                                        background: 'rgba(232, 160, 66, 0.1)',
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        fontWeight: 600,
-                                        fontSize: '10px'
-                                    }}>
-                                        {user?.role || 'Farmer'}
-                                    </span>
-                                </div>
+
                                 <input
                                     type="file"
                                     ref={fileInputRef}

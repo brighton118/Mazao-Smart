@@ -1,0 +1,39 @@
+{
+  "signup": {
+    "data": {
+      "user": null,
+      "session": null
+    },
+    "error": {
+      "name": "AuthApiError",
+      "message": "email rate limit exceeded",
+      "status": 429,
+      "code": "over_email_send_rate_limit"
+    }
+  },
+  "user_table": {
+    "success": false,
+    "error": {
+      "code": "PGRST116",
+      "details": "The result contains 0 rows",
+      "hint": null,
+      "message": "Cannot coerce the result to a single JSON object"
+    },
+    "data": null,
+    "count": null,
+    "status": 406,
+    "statusText": "Not Acceptable"
+  },
+  "login": {
+    "data": {
+      "user": null,
+      "session": null
+    },
+    "error": {
+      "name": "AuthApiError",
+      "message": "Invalid login credentials",
+      "status": 400,
+      "code": "invalid_credentials"
+    }
+  }
+}

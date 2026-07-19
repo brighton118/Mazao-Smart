@@ -4,6 +4,92 @@ import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { useSimulation } from '../context/SimulationContext'
 
+function WaterParticles({ active }: { active: boolean }) {
+    const group = useRef<THREE.Group>(null)
+
+    useFrame(({ clock }) => {
+        if (!group.current) return
+        if (!active) {
+            group.current.visible = false
+            return
+        }
+        group.current.visible = true
+        const elapsed = clock.elapsedTime
+        // Animate particles falling down
+        group.current.children.forEach((child, i) => {
+            const speed = 1.5 + (i * 0.2)
+            const dropTime = (elapsed * speed + (i * 0.5)) % 1
+            // Start at y=0.8, fall to y=0
+            child.position.y = 0.8 - (dropTime * 0.8)
+            // Fade out near bottom
+            child.scale.setScalar(dropTime > 0.8 ? (1 - dropTime) * 5 : 1)
+        })
+    })
+
+    return (
+        <group ref={group} visible={false}>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+                <mesh key={i} position={[Math.cos(i * Math.PI / 3) * 0.15, 0.8, Math.sin(i * Math.PI / 3) * 0.15]}>
+                    <sphereGeometry args={[0.015, 4, 4]} />
+                    <meshBasicMaterial color="#60a5fa" transparent opacity={0.8} />
+                </mesh>
+            ))}
+        </group>
+    )
+}
+
+function DataPacket({ active }: { active: boolean }) {
+    const group = useRef<THREE.Group>(null)
+    const packetRef = useRef<THREE.Mesh>(null)
+    const curveRef = useRef<THREE.QuadraticBezierCurve3 | null>(null)
+
+    useFrame(({ clock }) => {
+        if (!group.current || !packetRef.current) return
+        if (!active) {
+            packetRef.current.visible = false
+            return
+        }
+
+        if (!curveRef.current) {
+            // calculate local target of global [0, 1.2, 0]
+            const targetGlobal = new THREE.Vector3(0, 1.2, 0)
+            const targetLocal = group.current.worldToLocal(targetGlobal.clone())
+
+            // Start from top of sensor [0, 0.6, 0]
+            const startLocal = new THREE.Vector3(0, 0.6, 0)
+
+            // Midpoint control for bezier curve (arc upwards)
+            const midLocal = startLocal.clone().lerp(targetLocal, 0.5)
+            midLocal.y += 1.5 // arc height
+
+            curveRef.current = new THREE.QuadraticBezierCurve3(startLocal, midLocal, targetLocal)
+        }
+
+        // Send a burst every few seconds to show telemetry transmission
+        const t = (clock.elapsedTime * 0.5) % 1
+
+        // Show packet for 0-0.4 of cycle (animates from 0 to 1 along curve)
+        if (t > 0.4) {
+            packetRef.current.visible = false
+        } else {
+            packetRef.current.visible = true
+            const normalizedT = t / 0.4
+            const pos = curveRef.current.getPoint(normalizedT)
+            packetRef.current.position.copy(pos)
+        }
+    })
+
+    return (
+        <group ref={group}>
+            <mesh ref={packetRef} visible={false}>
+                <sphereGeometry args={[0.02, 8, 8]} />
+                <meshBasicMaterial color="#3b82f6" />
+                <pointLight distance={1} intensity={0.5} color="#3b82f6" />
+            </mesh>
+        </group>
+    )
+}
+
 interface SensorStakeProps {
     id: string
     position: [number, number, number]
@@ -12,7 +98,7 @@ interface SensorStakeProps {
 }
 
 export default function Sensors({ id, position, onSelect, onSelectComponent }: SensorStakeProps) {
-    const { state } = useSimulation()
+    const { state, dispatch } = useSimulation()
     const wetSoilRef = useRef<THREE.Mesh>(null)
 
     // Find current node
@@ -21,11 +107,17 @@ export default function Sensors({ id, position, onSelect, onSelectComponent }: S
     const moisture = node ? node.moisture : 50
     const isIrrigating = node ? node.irrigating : false
 
-    // Colors mapping matches status Config exactly
-    let color = '#27ae60' // optimal
-    if (!isOnline) color = '#7f8c8d'
-    else if (moisture < (node?.minMoisture ?? 30) - 10) color = '#e74c3c' // critical
-    else if (moisture < (node?.minMoisture ?? 30)) color = '#f39c12' // low
+    // Identify recent AI log event for this node (within last 15 seconds)
+    const latestLog = state.log.find(l => l.sensorId === id)
+    const timeSinceLog = latestLog ? new Date().getTime() - new Date(latestLog.timestamp).getTime() : 999999
+    const showLog = latestLog && timeSinceLog < 15000
+
+    // Custom color mapping as requested: Red < 35%, Yellow < 50%, Green < 75%, Blue > 75%
+    let color = '#3b82f6' // Blue > 75%
+    if (!isOnline) color = '#94a3b8' // offline
+    else if (moisture < 35) color = '#ef4444' // Red < 35%
+    else if (moisture < 50) color = '#eab308' // Yellow < 50%
+    else if (moisture <= 75) color = '#22c55e' // Green < 75%
 
     // Animate soil moistness ring overlay (shading)
     // Dilates outward if irrigating, slowly fades color as moisture drops
@@ -92,6 +184,10 @@ Telemetry Readings:
                 <meshStandardMaterial color="#4a3728" roughness={0.9} />
             </mesh>
 
+            {/* Active Irrigation Water Particles */}
+            <WaterParticles active={isIrrigating} />
+            <DataPacket active={isOnline} />
+
             {/* Stake Probe Body (Capacitive board section) */}
             <mesh position={[0, 0.3, 0]} castShadow>
                 <boxGeometry args={[0.02, 0.28, 0.06]} />
@@ -123,28 +219,96 @@ Telemetry Readings:
             </mesh>
 
             {/* Display floating tag label */}
-            <Html position={[0, 0.75, 0]} center distanceFactor={8}>
+            <Html position={[0, 0.85, 0]} center distanceFactor={8}>
                 <div style={{
-                    background: 'rgba(15, 23, 42, 0.85)',
-                    backdropFilter: 'blur(4px)',
-                    color: color,
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: `1px solid ${color}44`,
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#f1f5f9',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    minWidth: '130px',
+                    border: `1px solid ${color}`,
                     pointerEvents: 'none',
                     userSelect: 'none',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                    boxShadow: `0 4px 12px rgba(0,0,0,0.6), 0 0 10px ${color}44`,
                     display: 'flex',
-                    gap: '4px',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    gap: '4px'
                 }}>
-                    <span>Node {id}</span>
-                    <span style={{ fontSize: '7px', opacity: 0.7 }}>{isOnline ? `${moisture}%` : 'OFFLINE'}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.05em' }}>Node {id}</span>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}` }} />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '9px', color: '#94a3b8' }}>Moisture:</span>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: isOnline ? '#fff' : '#ef4444' }}>
+                            {isOnline ? `${moisture.toFixed(1)}%` : 'OFFLINE'}
+                        </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '9px', color: '#94a3b8' }}>Status:</span>
+                        <span style={{ fontSize: '9px', fontWeight: 'bold', color: color, textTransform: 'uppercase' }}>
+                            {isOnline ? node?.status : 'ERR'}
+                        </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', paddingTop: '4px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                        <span style={{ fontSize: '8px', color: '#64748b' }}>Updated:</span>
+                        <span style={{ fontSize: '8px', color: '#cbd5e1' }}>
+                            {state.lastSyncAt ? state.lastSyncAt.toLocaleTimeString([], { hour12: false }) : 'N/A'}
+                        </span>
+                    </div>
+
+                    {/* Manual override button if in manual mode */}
+                    {node?.mode === 'manual' && (
+                        <div style={{ marginTop: '4px', textAlign: 'center', pointerEvents: 'auto' }}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    dispatch({ type: 'TOGGLE_VALVE', id });
+                                }}
+                                style={{
+                                    background: isIrrigating ? '#ef4444' : '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    padding: '2px 8px',
+                                    fontSize: '9px',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {isIrrigating ? 'Stop Water' : 'Start Water'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </Html>
+
+            {/* AI Decision Event Log Popup (Visible for 15s) */}
+            {showLog && latestLog && (
+                <Html position={[0, 1.25, 0]} center distanceFactor={8}>
+                    <div style={{
+                        background: 'rgba(16, 185, 129, 0.2)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(16, 185, 129, 0.6)',
+                        borderRadius: '4px',
+                        padding: '4px 8px',
+                        color: '#f8fafc',
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        maxWidth: '220px',
+                        textAlign: 'center',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                        pointerEvents: 'none',
+                    }}>
+                        {latestLog.message}
+                    </div>
+                </Html>
+            )}
         </group>
     )
 }

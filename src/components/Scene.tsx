@@ -219,6 +219,7 @@ export default function Scene() {
             {/* 7. Outdoor Crops Fields Plots */}
             <OutdoorFarm
                 position={[2.5, 0, 0.0]}
+                sensors={sensors}
                 onSelectComponent={handleSelectComponent}
             />
 

@@ -30,12 +30,12 @@ export const AuthPages: React.FC = () => {
     const [regNid, setRegNid] = useState('')
     const [regPass, setRegPass] = useState('')
     const [regConfirmPass, setRegConfirmPass] = useState('')
-    const [regRole, setRegRole] = useState<'Administrator' | 'Farmer' | 'Agronomist' | 'Technician'>('Farmer')
+    const regRole: 'Administrator' | 'Farmer' | 'Agronomist' | 'Technician' = 'Farmer'
     const [regFarmName, setRegFarmName] = useState('')
     const [regDistrict, setRegDistrict] = useState('')
     const [regVillage, setRegVillage] = useState('')
     const [regGps, setRegGps] = useState('')
-    const [regLang, setRegLang] = useState('en')
+    const regLang = 'en'
     const [acceptTerms, setAcceptTerms] = useState(false)
 
     // --- Forgot / Reset Password State ---
@@ -183,19 +183,6 @@ export const AuthPages: React.FC = () => {
         }
     }
 
-    // Quick Login test help
-    const triggerQuickLogin = async (username: string) => {
-        setLoading(true)
-        const password = username === 'admin' ? 'admin123' :
-            username === 'farmer1' ? 'farmer123' :
-                username === 'agronomist1' ? 'agro123' : 'tech123'
-        const res = await login(username, password)
-        setLoading(false)
-        if (!res.success) {
-            triggerToast(res.error || 'Quick Login failed.', 'error')
-        }
-    }
-
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden text-slate-100">
             {/* Background Orbs */}
@@ -209,7 +196,7 @@ export const AuthPages: React.FC = () => {
                         <Shield className="h-6 w-6 text-slate-900" />
                     </div>
                     <span className="text-2xl font-bold tracking-wide bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                        AgriSense Secure
+                        AgriSense Agronomy Experts
                     </span>
                 </div>
                 <p className="mt-2 text-center text-sm text-slate-400">
@@ -280,46 +267,6 @@ export const AuthPages: React.FC = () => {
                                 </button>
                             </form>
 
-                            {/* Quick Login Test Accounts */}
-                            <div className="mt-8 pt-6 border-t border-slate-800">
-                                <span className="block text-center text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                                    Quick Authentication Shortcuts (Testing)
-                                </span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => triggerQuickLogin('admin')}
-                                        disabled={loading}
-                                        className="bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-emerald-950 hover:border-emerald-800 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all"
-                                    >
-                                        <span>Administrator</span>
-                                        <span className="text-[10px] bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-300">admin</span>
-                                    </button>
-                                    <button
-                                        onClick={() => triggerQuickLogin('farmer1')}
-                                        disabled={loading}
-                                        className="bg-slate-950 hover:bg-slate-800 text-teal-400 border border-teal-950 hover:border-teal-800 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all"
-                                    >
-                                        <span>Farmer</span>
-                                        <span className="text-[10px] bg-teal-950 px-1.5 py-0.5 rounded text-teal-300">farmer1</span>
-                                    </button>
-                                    <button
-                                        onClick={() => triggerQuickLogin('agronomist1')}
-                                        disabled={loading}
-                                        className="bg-slate-950 hover:bg-slate-800 text-amber-400 border border-amber-950 hover:border-amber-800 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all"
-                                    >
-                                        <span>Agronomist</span>
-                                        <span className="text-[10px] bg-amber-950 px-1.5 py-0.5 rounded text-amber-300">agro1</span>
-                                    </button>
-                                    <button
-                                        onClick={() => triggerQuickLogin('technician1')}
-                                        disabled={loading}
-                                        className="bg-slate-950 hover:bg-slate-800 text-sky-400 border border-sky-950 hover:border-sky-800 py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all"
-                                    >
-                                        <span>Technician</span>
-                                        <span className="text-[10px] bg-sky-950 px-1.5 py-0.5 rounded text-sky-300">tech1</span>
-                                    </button>
-                                </div>
-                            </div>
 
                             <div className="mt-6 text-center text-sm">
                                 <span className="text-slate-400">Need an account?</span>{' '}
@@ -337,7 +284,7 @@ export const AuthPages: React.FC = () => {
                     {view === 'register' && (
                         <div>
                             <h2 className="text-xl font-semibold mb-5 flex items-center gap-2">
-                                <UserPlus className="h-5 w-5 text-emerald-400" /> Dynamic Portal Registration
+                                <UserPlus className="h-5 w-5 text-emerald-400" /> Portal Registration
                             </h2>
 
                             <form className="space-y-4 max-h-[60vh] overflow-y-auto pr-1" onSubmit={handleRegister}>
@@ -355,35 +302,18 @@ export const AuthPages: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                                            Username *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            required
-                                            className="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-500 rounded-xl py-2 px-3.5 text-slate-100 text-sm placeholder-slate-750 focus:outline-none"
-                                            placeholder="username"
-                                            value={regUser}
-                                            onChange={(e) => setRegUser(e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                                            User Role *
-                                        </label>
-                                        <select
-                                            className="w-full bg-slate-950/85 border border-slate-800 focus:border-emerald-500 rounded-xl py-2 px-3.5 text-slate-100 text-sm focus:outline-none"
-                                            value={regRole}
-                                            onChange={(e) => setRegRole(e.target.value as any)}
-                                        >
-                                            <option value="Administrator">Administrator</option>
-                                            <option value="Farmer">Farmer</option>
-                                            <option value="Agronomist">Agronomist</option>
-                                            <option value="Technician">Technician</option>
-                                        </select>
-                                    </div>
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                                        Username *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-500 rounded-xl py-2 px-3.5 text-slate-100 text-sm placeholder-slate-750 focus:outline-none"
+                                        placeholder="username"
+                                        value={regUser}
+                                        onChange={(e) => setRegUser(e.target.value)}
+                                    />
                                 </div>
 
                                 <div>
@@ -530,23 +460,7 @@ export const AuthPages: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 gap-3 pt-2">
-                                    <div>
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                                            Preferred Language
-                                        </label>
-                                        <select
-                                            className="w-full bg-slate-950/85 border border-slate-800 focus:border-emerald-500 rounded-xl py-2 px-3.5 text-slate-100 text-sm focus:outline-none"
-                                            value={regLang}
-                                            onChange={(e) => setRegLang(e.target.value)}
-                                        >
-                                            <option value="en">English</option>
-                                            <option value="sw">Swahili</option>
-                                            <option value="lg">Luganda</option>
-                                            <option value="ny">Runyankole</option>
-                                        </select>
-                                    </div>
-                                </div>
+
 
                                 <div className="flex items-start gap-2 pt-2">
                                     <input

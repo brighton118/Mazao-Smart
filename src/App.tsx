@@ -67,33 +67,16 @@ function MainLayout() {
     { id: 'sensors', label: 'Node Registry', icon: '💾', badge: offlineSensorsCount, badgeColor: '#8aab90' },
     { id: 'billing', label: 'Water Economics', icon: '💧', badge: 0, badgeColor: '#4caf7d' },
     { id: 'alerts', label: 'System Rules & Log', icon: '🚨', badge: activeAlertsCount, badgeColor: '#e05a4e' },
-    { id: 'ai-assistant', label: 'Contextual Agronomist', icon: '🤖', badge: 0, badgeColor: '#4caf7d' },
+    { id: 'ai-assistant', label: 'AgriSense AI', icon: '🤖', badge: 0, badgeColor: '#4caf7d' },
     { id: 'settings', label: 'System Settings', icon: '⚙️', badge: 0, badgeColor: '#4caf7d' },
   ]
 
-  // Role-Based Access Control Filters
-  const userRole = user?.role || 'Farmer'
-  const filteredNavigationItems = navigationItems.filter(item => {
-    if (userRole === 'Administrator') return true
-    if (userRole === 'Technician') {
-      return ['sensors', '3d-sim', 'alerts', 'settings'].includes(item.id)
-    }
-    if (userRole === 'Agronomist') {
-      return ['dashboard', '3d-sim', 'greenhouses', 'gardens', 'ai-assistant', 'settings'].includes(item.id)
-    }
-    if (userRole === 'Farmer') {
-      return ['dashboard', 'greenhouses', 'gardens', 'billing', 'ai-assistant', 'settings'].includes(item.id)
-    }
-    return false
-  })
-
-  // Shift currentTab if not allowed for newly switched role
-  const allowedTabs = filteredNavigationItems.map(item => item.id)
+  const allowedTabs = navigationItems.map(item => item.id)
   useEffect(() => {
     if (user && allowedTabs.length > 0 && !allowedTabs.includes(currentTab)) {
       setCurrentTab(allowedTabs[0])
     }
-  }, [userRole, currentTab, user])
+  }, [currentTab, user])
 
   if (isLoading) {
     return (
@@ -298,7 +281,7 @@ function MainLayout() {
             </svg>
           </div>
           <span className="font-display" style={{ fontSize: '20px', fontWeight: 800, color: '#f5efe6', letterSpacing: '0.04em' }}>
-            MAZAO<span style={{ color: '#4caf7d' }}>SMART</span>
+            AgriSense <span style={{ color: '#4caf7d' }}>Agronomy Experts</span>
           </span>
         </div>
 
@@ -336,22 +319,6 @@ function MainLayout() {
             <div style={{ fontSize: '13px', fontWeight: 650, color: '#f5efe6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {user.full_name}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-              <span style={{
-                fontSize: '8.5px',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                padding: '1px 5px',
-                borderRadius: '4px',
-                background: user.role === 'Administrator' ? '#e05a4e' :
-                  user.role === 'Farmer' ? '#4caf7d' :
-                    user.role === 'Agronomist' ? '#e8a042' : '#8aab90',
-                color: '#0f2318',
-                letterSpacing: '0.04em'
-              }}>
-                {user.role}
-              </span>
-            </div>
           </div>
           <button
             onClick={logout}
@@ -377,7 +344,7 @@ function MainLayout() {
 
         {/* Navigation list */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-          {filteredNavigationItems.map(item => {
+          {navigationItems.map(item => {
             const active = currentTab === item.id
             return (
               <button
@@ -469,7 +436,7 @@ function MainLayout() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#4caf7d', display: 'flex', alignItems: 'center', justifySelf: 'center' }} />
-            <span className="font-display" style={{ fontSize: '16px', fontWeight: 800 }}>MAZAOSMART</span>
+            <span className="font-display" style={{ fontSize: '16px', fontWeight: 800 }}>AgriSense Agronomy Experts</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -508,7 +475,7 @@ function MainLayout() {
             maxHeight: 'calc(100vh - 60px)',
             overflowY: 'auto'
           }}>
-            {filteredNavigationItems.map(item => {
+            {navigationItems.map(item => {
               const active = currentTab === item.id
               return (
                 <button

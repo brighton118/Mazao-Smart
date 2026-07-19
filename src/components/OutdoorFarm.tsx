@@ -1,11 +1,13 @@
 import { Html } from '@react-three/drei'
+import { SensorNode } from '../context/SimulationContext'
 
 interface OutdoorFarmProps {
     position: [number, number, number]
+    sensors?: SensorNode[]
     onSelectComponent: (name: string, specs: string) => void
 }
 
-export default function OutdoorFarm({ position, onSelectComponent }: OutdoorFarmProps) {
+export default function OutdoorFarm({ position, sensors, onSelectComponent }: OutdoorFarmProps) {
 
     const handleSelect = () => {
         onSelectComponent(
@@ -38,24 +40,39 @@ Zone Layout:
 
                 {/* Rows of crop plants (Corn stalks) */}
                 {[-1.6, -0.6, 0.4, 1.4].map((x) =>
-                    [-2, -1, 0, 1, 2].map((z) => (
-                        <group key={`maize-${x}-${z}`} position={[x, 0.05, z]}>
-                            {/* Plant Stem */}
-                            <mesh position={[0, 0.4, 0]} castShadow>
-                                <cylinderGeometry args={[0.015, 0.02, 0.8, 5]} />
-                                <meshStandardMaterial color="#2d8a4e" roughness={0.9} />
-                            </mesh>
-                            {/* Plant Leaves */}
-                            <mesh position={[0, 0.7, 0]} rotation={[0.4, 0, 0.4]}>
-                                <coneGeometry args={[0.08, 0.3, 4]} />
-                                <meshStandardMaterial color="#22b358" />
-                            </mesh>
-                            <mesh position={[0, 0.6, 0]} rotation={[-0.4, 0, -0.4]}>
-                                <coneGeometry args={[0.07, 0.25, 4]} />
-                                <meshStandardMaterial color="#218c47" />
-                            </mesh>
-                        </group>
-                    ))
+                    [-2, -1, 0, 1, 2].map((z) => {
+                        const sensorId = z < 0 ? 'A1' : 'A2';
+                        const status = sensors?.find(s => s.id === sensorId)?.status || 'optimal';
+
+                        let leafColor1 = "#22b358"
+                        let leafColor2 = "#218c47"
+                        if (status === 'critical') {
+                            leafColor1 = "#92400e"
+                            leafColor2 = "#78350f"
+                        } else if (status === 'low') {
+                            leafColor1 = "#facc15"
+                            leafColor2 = "#eab308"
+                        }
+
+                        return (
+                            <group key={`maize-${x}-${z}`} position={[x, 0.05, z]}>
+                                {/* Plant Stem */}
+                                <mesh position={[0, 0.4, 0]} castShadow>
+                                    <cylinderGeometry args={[0.015, 0.02, 0.8, 5]} />
+                                    <meshStandardMaterial color={status === 'critical' ? "#78350f" : "#2d8a4e"} roughness={0.9} />
+                                </mesh>
+                                {/* Plant Leaves */}
+                                <mesh position={[0, 0.7, 0]} rotation={[0.4, 0, 0.4]}>
+                                    <coneGeometry args={[0.08, 0.3, 4]} />
+                                    <meshStandardMaterial color={leafColor1} />
+                                </mesh>
+                                <mesh position={[0, 0.6, 0]} rotation={[-0.4, 0, -0.4]}>
+                                    <coneGeometry args={[0.07, 0.25, 4]} />
+                                    <meshStandardMaterial color={leafColor2} />
+                                </mesh>
+                            </group>
+                        )
+                    })
                 )}
             </group>
 
@@ -70,20 +87,35 @@ Zone Layout:
 
                 {/* Rows of crop plants (Sorghum stalks - slightly shorter/redder tops) */}
                 {[-1.6, -0.6, 0.4, 1.4].map((x) =>
-                    [-2, -1, 0, 1, 2].map((z) => (
-                        <group key={`sorghum-${x}-${z}`} position={[x, 0.05, z]}>
-                            {/* Stem */}
-                            <mesh position={[0, 0.3, 0]} castShadow>
-                                <cylinderGeometry args={[0.012, 0.018, 0.6, 5]} />
-                                <meshStandardMaterial color="#3b7d34" roughness={0.8} />
-                            </mesh>
-                            {/* Grain head */}
-                            <mesh position={[0, 0.55, 0]}>
-                                <sphereGeometry args={[0.04, 6, 6]} />
-                                <meshStandardMaterial color="#b33939" roughness={0.9} />
-                            </mesh>
-                        </group>
-                    ))
+                    [-2, -1, 0, 1, 2].map((z) => {
+                        const sensorId = z < 0 ? 'C1' : 'C2';
+                        const status = sensors?.find(s => s.id === sensorId)?.status || 'optimal';
+
+                        let stemColor = "#3b7d34"
+                        let headColor = "#b33939"
+                        if (status === 'critical') {
+                            stemColor = "#713f12"
+                            headColor = "#451a03"
+                        } else if (status === 'low') {
+                            stemColor = "#84cc16"
+                            headColor = "#f59e0b"
+                        }
+
+                        return (
+                            <group key={`sorghum-${x}-${z}`} position={[x, 0.05, z]}>
+                                {/* Stem */}
+                                <mesh position={[0, 0.3, 0]} castShadow>
+                                    <cylinderGeometry args={[0.012, 0.018, 0.6, 5]} />
+                                    <meshStandardMaterial color={stemColor} roughness={0.8} />
+                                </mesh>
+                                {/* Grain head */}
+                                <mesh position={[0, 0.55, 0]}>
+                                    <sphereGeometry args={[0.04, 6, 6]} />
+                                    <meshStandardMaterial color={headColor} roughness={0.9} />
+                                </mesh>
+                            </group>
+                        )
+                    })
                 )}
             </group>
 

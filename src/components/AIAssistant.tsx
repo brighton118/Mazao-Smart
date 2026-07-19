@@ -200,7 +200,7 @@ export default function AIAssistant() {
                         </span>
                     </div>
                     <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
-                        AI Copilot Assistant
+                        AgriSense AI
                     </h2>
                 </div>
 
@@ -264,7 +264,7 @@ export default function AIAssistant() {
                             >
                                 {/* Badge ID */}
                                 <span className="font-mono-data" style={{ fontSize: '10px', color: '#8aab90', marginBottom: '4px' }}>
-                                    {isUser ? 'YOU' : 'AGRISENSE COPILOT'} · {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    {isUser ? 'YOU' : 'AGRISENSE AI'} · {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
 
                                 {/* Message bubble */}
@@ -288,7 +288,7 @@ export default function AIAssistant() {
                     {isTyping && (
                         <div style={{ alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <span className="font-mono-data" style={{ fontSize: '10px', color: '#8aab90', marginBottom: '4px' }}>
-                                AGRISENSE COPILOT · Thinking...
+                                AGRISENSE AI · Thinking...
                             </span>
                             <div style={{
                                 padding: '12px 16px',

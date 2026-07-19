@@ -6,8 +6,6 @@ import { useAuth } from '../context/AuthContext'
 export default function SensorManagement() {
     const { state, dispatch } = useSimulation()
     const { sensors, lastSyncAt } = state
-    const { user } = useAuth()
-    const isWriteAllowed = user?.role === 'Administrator' || user?.role === 'Technician'
 
     // Add Sensor Node states
     const [showAddModal, setShowAddModal] = useState(false)
@@ -123,44 +121,24 @@ export default function SensorManagement() {
                     </div>
                 </div>
 
-                {isWriteAllowed && (
-                    <button
-                        onClick={openAddModal}
-                        style={{
-                            padding: '12px 20px',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(76,175,125,0.4)',
-                            background: 'rgba(76,175,125,0.12)',
-                            color: '#4caf7d',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            fontFamily: 'DM Sans, sans-serif',
-                            transition: 'all 0.2s',
-                        }}
-                    >
-                        + Add Sensor Node
-                    </button>
-                )}
+                <button
+                    onClick={openAddModal}
+                    style={{
+                        padding: '12px 20px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(76,175,125,0.4)',
+                        background: 'rgba(76,175,125,0.12)',
+                        color: '#4caf7d',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                        transition: 'all 0.2s',
+                    }}
+                >
+                    + Add Sensor Node
+                </button>
             </div>
-
-            {!isWriteAllowed && (
-                <div style={{
-                    marginBottom: '32px',
-                    background: 'rgba(232, 160, 66, 0.08)',
-                    border: '1px solid rgba(232, 160, 66, 0.25)',
-                    borderRadius: '8px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    color: '#e8a042',
-                    fontSize: '13px'
-                }}>
-                    <span>⚠️</span>
-                    <span><strong>Read-Only Access:</strong> You are logged in as a <strong>{user?.role}</strong>. Only Administrators and Technicians can calibrate node thresholds or register new devices.</span>
-                </div>
-            )}
 
             {/* Grid of IoT Nodes */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '16px' }}>
@@ -192,24 +170,22 @@ export default function SensorManagement() {
                                         </span>
                                         <span style={{ fontSize: '13px', color: '#8aab90' }}>({node.crop})</span>
                                     </div>
-                                    {isWriteAllowed && (
-                                        <button
-                                            onClick={() => SimulationController.toggleOnline(dispatch, node.id)}
-                                            style={{
-                                                background: node.online ? 'rgba(224,90,78,0.1)' : 'rgba(76,175,125,0.15)',
-                                                border: `1px solid ${node.online ? 'rgba(224,90,78,0.3)' : 'rgba(76,175,125,0.3)'}`,
-                                                borderRadius: '4px',
-                                                color: node.online ? '#e05a4e' : '#4caf7d',
-                                                fontSize: '10px',
-                                                fontWeight: 600,
-                                                padding: '3px 8px',
-                                                cursor: 'pointer',
-                                                fontFamily: 'DM Sans, sans-serif'
-                                            }}
-                                        >
-                                            {node.online ? 'DISCONNECT' : 'RECONNECT'}
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => SimulationController.toggleOnline(dispatch, node.id)}
+                                        style={{
+                                            background: node.online ? 'rgba(224,90,78,0.1)' : 'rgba(76,175,125,0.15)',
+                                            border: `1px solid ${node.online ? 'rgba(224,90,78,0.3)' : 'rgba(76,175,125,0.3)'}`,
+                                            borderRadius: '4px',
+                                            color: node.online ? '#e05a4e' : '#4caf7d',
+                                            fontSize: '10px',
+                                            fontWeight: 600,
+                                            padding: '3px 8px',
+                                            cursor: 'pointer',
+                                            fontFamily: 'DM Sans, sans-serif'
+                                        }}
+                                    >
+                                        {node.online ? 'DISCONNECT' : 'RECONNECT'}
+                                    </button>
                                 </div>
 
                                 <div style={{ marginBottom: '16px' }}>
@@ -247,52 +223,50 @@ export default function SensorManagement() {
                             </div>
 
                             {/* Adjust / remove buttons */}
-                            {isWriteAllowed && (
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={() => startEditing(node)}
-                                        style={{
-                                            flex: 2,
-                                            padding: '8px 12px',
-                                            borderRadius: '6px',
-                                            border: '1px solid rgba(245,239,230,0.15)',
-                                            background: 'rgba(245,239,230,0.03)',
-                                            color: '#f5efe6',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            fontFamily: 'DM Sans, sans-serif',
-                                            transition: 'all 0.2s',
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        ⚙️ Calibrate Node
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`Remove sensor node ${node.id} from the AgriSense network?`)) {
-                                                dispatch({ type: 'REMOVE_NODE', id: node.id })
-                                            }
-                                        }}
-                                        style={{
-                                            flex: 1,
-                                            padding: '8px 12px',
-                                            borderRadius: '6px',
-                                            border: '1px solid rgba(224,90,78,0.3)',
-                                            background: 'rgba(224,90,78,0.1)',
-                                            color: '#e05a4e',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            fontFamily: 'DM Sans, sans-serif',
-                                            transition: 'all 0.2s',
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        🗑 Remove
-                                    </button>
-                                </div>
-                            )}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    onClick={() => startEditing(node)}
+                                    style={{
+                                        flex: 2,
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid rgba(245,239,230,0.15)',
+                                        background: 'rgba(245,239,230,0.03)',
+                                        color: '#f5efe6',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        fontFamily: 'DM Sans, sans-serif',
+                                        transition: 'all 0.2s',
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    ⚙️ Calibrate Node
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirm(`Remove sensor node ${node.id} from the AgriSense network?`)) {
+                                            dispatch({ type: 'REMOVE_NODE', id: node.id })
+                                        }
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid rgba(224,90,78,0.3)',
+                                        background: 'rgba(224,90,78,0.1)',
+                                        color: '#e05a4e',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        fontFamily: 'DM Sans, sans-serif',
+                                        transition: 'all 0.2s',
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    🗑 Remove
+                                </button>
+                            </div>
                         </div>
                     )
                 })}

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useSimulation } from '../context/SimulationContext'
-import { useAuth } from '../context/AuthContext'
 
 interface Invoice {
     id: string
@@ -13,9 +12,7 @@ interface Invoice {
 
 export default function WaterBilling() {
     const { state } = useSimulation()
-    const { user } = useAuth()
 
-    const isBillingAdmin = user?.role === 'Administrator' || user?.role === 'Farmer'
     const [tariffRate, setTariffRate] = useState(15) // 15 UGX per liter of agricultural water
     const [selectedCurrency, setSelectedCurrency] = useState<'UGX' | 'USD'>('UGX')
 
@@ -121,25 +118,6 @@ export default function WaterBilling() {
                     </button>
                 </div>
             </div>
-
-            {/* Read-only banner if not Admin / Farmer */}
-            {!isBillingAdmin && (
-                <div style={{
-                    marginBottom: '24px',
-                    background: 'rgba(232, 160, 66, 0.08)',
-                    border: '1px solid rgba(232, 160, 66, 0.25)',
-                    borderRadius: '8px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    color: '#e8a042',
-                    fontSize: '13px'
-                }}>
-                    <span>⚠️</span>
-                    <span><strong>Read-Only Access:</strong> You are logged in as a <strong>{user?.role}</strong>. Only Administrators and Farmers can configure tariffs, generate invoices, or record payments.</span>
-                </div>
-            )}
 
             {/* Main Billing KPI Blocks */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -283,29 +261,27 @@ export default function WaterBilling() {
                                 <div style={{ fontSize: '11px', color: '#8aab90', marginBottom: '4px' }} className="font-mono-data">AGRICULTURAL WATER RATE</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{ fontSize: '16px', color: '#f5efe6', fontWeight: 650 }}>{tariffRate} UGX / Liter</div>
-                                    {isBillingAdmin && (
-                                        <button
-                                            onClick={() => {
-                                                const res = prompt('Configure agricultural water tariff (UGX/Liter):', tariffRate.toString())
-                                                if (res && !isNaN(Number(res))) {
-                                                    setTariffRate(Math.max(1, Number(res)))
-                                                }
-                                            }}
-                                            style={{
-                                                background: 'rgba(76,175,125,0.15)',
-                                                border: '1px solid rgba(76,175,125,0.3)',
-                                                borderRadius: '4px',
-                                                color: '#4caf7d',
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                padding: '2px 6px',
-                                                cursor: 'pointer',
-                                                fontFamily: 'DM Sans, sans-serif'
-                                            }}
-                                        >
-                                            Configure
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => {
+                                            const res = prompt('Configure agricultural water tariff (UGX/Liter):', tariffRate.toString())
+                                            if (res && !isNaN(Number(res))) {
+                                                setTariffRate(Math.max(1, Number(res)))
+                                            }
+                                        }}
+                                        style={{
+                                            background: 'rgba(76,175,125,0.15)',
+                                            border: '1px solid rgba(76,175,125,0.3)',
+                                            borderRadius: '4px',
+                                            color: '#4caf7d',
+                                            fontSize: '11px',
+                                            fontWeight: 600,
+                                            padding: '2px 6px',
+                                            cursor: 'pointer',
+                                            fontFamily: 'DM Sans, sans-serif'
+                                        }}
+                                    >
+                                        Configure
+                                    </button>
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#8aab90', marginTop: '4px' }}>Subsidized Mbarara Municipality Scheme</div>
                             </div>
@@ -331,38 +307,36 @@ export default function WaterBilling() {
                             <h3 className="font-display" style={{ fontSize: '18px', fontWeight: 700, color: '#f5efe6', margin: 0, textTransform: 'uppercase' }}>
                                 Invoice Ledger
                             </h3>
-                            {isBillingAdmin && (
-                                <button
-                                    onClick={() => {
-                                        const invoiceId = `INV-${Math.floor(100 + Math.random() * 900)}`
-                                        const nowStr = new Date().toISOString().split('T')[0]
-                                        setInvoices([
-                                            {
-                                                id: invoiceId,
-                                                date: nowStr,
-                                                amountUGX: totalWaterConsumed * tariffRate,
-                                                status: 'unpaid',
-                                                greenhouseLiters: totalWaterGreenhouse,
-                                                outfieldLiters: totalWaterOutfield
-                                            },
-                                            ...invoices
-                                        ])
-                                    }}
-                                    style={{
-                                        background: 'rgba(76,175,125,0.15)',
-                                        border: '1px solid rgba(76,175,125,0.3)',
-                                        borderRadius: '6px',
-                                        color: '#4caf7d',
-                                        fontSize: '11px',
-                                        fontWeight: 600,
-                                        padding: '6px 12px',
-                                        cursor: 'pointer',
-                                        fontFamily: 'DM Sans, sans-serif'
-                                    }}
-                                >
-                                    Generate Invoice
-                                </button>
-                            )}
+                            <button
+                                onClick={() => {
+                                    const invoiceId = `INV-${Math.floor(100 + Math.random() * 900)}`
+                                    const nowStr = new Date().toISOString().split('T')[0]
+                                    setInvoices([
+                                        {
+                                            id: invoiceId,
+                                            date: nowStr,
+                                            amountUGX: totalWaterConsumed * tariffRate,
+                                            status: 'unpaid',
+                                            greenhouseLiters: totalWaterGreenhouse,
+                                            outfieldLiters: totalWaterOutfield
+                                        },
+                                        ...invoices
+                                    ])
+                                }}
+                                style={{
+                                    background: 'rgba(76,175,125,0.15)',
+                                    border: '1px solid rgba(76,175,125,0.3)',
+                                    borderRadius: '6px',
+                                    color: '#4caf7d',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    padding: '6px 12px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'DM Sans, sans-serif'
+                                }}
+                            >
+                                Generate Invoice
+                            </button>
                         </div>
 
                         {/* List of Invoices */}
@@ -401,7 +375,7 @@ export default function WaterBilling() {
                                     <div style={{ fontSize: '10px', color: '#8aab90' }}>
                                         Breakdown: Greenhouse {inv.greenhouseLiters}L · Outfield {inv.outfieldLiters}L
                                     </div>
-                                    {inv.status === 'unpaid' && isBillingAdmin && (
+                                    {inv.status === 'unpaid' && (
                                         <button
                                             onClick={() => {
                                                 setInvoices(invoices.map(i => i.id === inv.id ? { ...i, status: 'paid' as const } : i))
