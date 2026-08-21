@@ -15,7 +15,7 @@ export default function OutdoorPanel() {
                         Open-Field Watering Network
                     </span>
                 </div>
-                <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
+                <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 32px)', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
                     Outdoor Gardens
                 </h2>
                 <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#8aab90' }}>
@@ -23,7 +23,7 @@ export default function OutdoorPanel() {
                 </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: '20px' }}>
                 {outfieldSensors.map(sensor => {
                     const isCritical = sensor.status === 'critical'
                     const isLow = sensor.status === 'low'
@@ -149,12 +149,13 @@ export default function OutdoorPanel() {
                                         <div style={{ fontSize: '12px', fontWeight: 600, color: '#f5efe6' }}>Irrigation Logic</div>
                                         <div style={{ fontSize: '11px', color: '#8aab90' }}>Automatic triggers vs manual override</div>
                                     </div>
-                                    <div style={{ display: 'flex', background: 'rgba(245,239,230,0.05)', borderRadius: '6px', padding: '2px' }}>
+                                    <div style={{ display: 'flex', background: 'rgba(245,239,230,0.05)', borderRadius: '6px', padding: '4px', gap: '4px' }}>
                                         <button
                                             onClick={() => !isOffline && SimulationController.setSensorMode(dispatch, sensor.id, 'auto')}
                                             disabled={isOffline}
                                             style={{
-                                                padding: '4px 10px',
+                                                padding: '8px 12px',
+                                                minHeight: '44px',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
                                                 border: 'none',
@@ -171,7 +172,8 @@ export default function OutdoorPanel() {
                                             onClick={() => !isOffline && SimulationController.setSensorMode(dispatch, sensor.id, 'manual')}
                                             disabled={isOffline}
                                             style={{
-                                                padding: '4px 10px',
+                                                padding: '8px 12px',
+                                                minHeight: '44px',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
                                                 border: 'none',
@@ -198,7 +200,8 @@ export default function OutdoorPanel() {
                                         onClick={() => !isOffline && SimulationController.toggleValve(dispatch, sensor.id)}
                                         disabled={isOffline || sensor.mode === 'auto'}
                                         style={{
-                                            padding: '8px 16px',
+                                            padding: '10px 16px',
+                                            minHeight: '44px',
                                             fontSize: '12px',
                                             fontWeight: 600,
                                             borderRadius: '6px',

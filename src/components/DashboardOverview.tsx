@@ -29,7 +29,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (tab: st
                         System Operational Dashboard
                     </span>
                 </div>
-                <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
+                <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 32px)', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
                     agrisense overview
                 </h2>
             </div>
@@ -37,7 +37,7 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (tab: st
             {/* Grid of 4 primary dials */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
                 gap: '16px',
                 marginBottom: '32px'
             }}>
@@ -144,20 +144,15 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (tab: st
             </div>
 
             {/* Main Grid: Health Alerts & Detailed Log */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr',
-                gap: '24px',
-                alignItems: 'start'
-            }} className="lg:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* Critical Alerts */}
                 <div style={{
                     background: 'rgba(22, 46, 30, 0.4)',
                     border: '1px solid rgba(245, 239, 230, 0.08)',
                     borderRadius: '12px',
-                    padding: '20px'
+                    padding: 'clamp(16px, 4vw, 20px)'
                 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f5efe6', textTransform: 'uppercase', margin: '0 0 16px 0', borderBottom: '1px solid rgba(245,239,230,0.08)', paddingBottom: '12px' }} className="font-display">
+                    <h3 style={{ fontSize: 'clamp(16px, 3.5vw, 18px)', fontWeight: 700, color: '#f5efe6', textTransform: 'uppercase', margin: '0 0 16px 0', borderBottom: '1px solid rgba(245,239,230,0.08)', paddingBottom: '12px' }} className="font-display">
                         Active Attention Areas
                     </h3>
 
@@ -252,10 +247,10 @@ export default function DashboardOverview({ onNavigate }: { onNavigate: (tab: st
                     background: 'rgba(22, 46, 30, 0.4)',
                     border: '1px solid rgba(245, 239, 230, 0.08)',
                     borderRadius: '12px',
-                    padding: '20px'
+                    padding: 'clamp(16px, 4vw, 20px)'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(245,239,230,0.08)', paddingBottom: '12px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(245,239,230,0.08)', paddingBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <h3 style={{ fontSize: 'clamp(16px, 3.5vw, 18px)', fontWeight: 700, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
                             Centralised Telemetry Stream
                         </h3>
                         <button

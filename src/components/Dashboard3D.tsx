@@ -8,8 +8,7 @@ function DigitalTwinLoader() {
     return (
         <div style={{
             width: '100%',
-            height: 'calc(100vh - 220px)',
-            minHeight: '480px',
+            height: 'clamp(400px, calc(100vh - 220px), 800px)',
             background: 'rgba(22, 46, 30, 0.25)',
             backdropFilter: 'blur(10px)',
             border: '1px dashed rgba(76, 175, 125, 0.3)',
@@ -63,7 +62,7 @@ export default function Dashboard3D() {
                             Real-Time Virtualization
                         </span>
                     </div>
-                    <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
+                    <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 32px)', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
                         3D Farm Simulation
                     </h2>
                     <div style={{ fontSize: '12px', color: '#8aab90', marginTop: '6px' }}>
@@ -73,7 +72,7 @@ export default function Dashboard3D() {
             </div>
 
             {/* 3D Canvas Box wrapper */}
-            <div style={{ width: '100%', height: 'calc(100vh - 220px)', minHeight: '520px', position: 'relative' }}>
+            <div style={{ width: '100%', height: 'clamp(400px, calc(100vh - 220px), 800px)', position: 'relative' }}>
                 <Suspense fallback={<DigitalTwinLoader />}>
                     <div style={{ width: '100%', height: '100%', borderRadius: '12px', overflow: 'hidden' }}>
                         <SmartFarm3D />

@@ -31,6 +31,16 @@ function MainLayout() {
 
   const { user, token, logout, isLoading } = useAuth()
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => { document.body.style.overflow = 'unset' }
+  }, [mobileMenuOpen])
+
   // Watch for toast events
   useEffect(() => {
     const handleToast = (e: Event) => {
@@ -421,10 +431,14 @@ function MainLayout() {
         </div>
       </aside>
 
-      {/* Mobile Sliding Sidebar & Header */}
-      <div className="md:hidden" style={{ width: '100%', position: 'fixed', top: 0, zIndex: 100 }}>
+      {/* Mobile Sliding Sidebar & Header Overlay System */}
+      <div className="md:hidden">
         {/* Mobile Header Bar */}
         <header style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
           height: '60px',
           background: 'rgba(15, 35, 24, 0.95)',
           backdropFilter: 'blur(10px)',
@@ -432,49 +446,90 @@ function MainLayout() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 20px'
+          padding: '0 16px',
+          zIndex: 80
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#4caf7d', display: 'flex', alignItems: 'center', justifySelf: 'center' }} />
-            <span className="font-display" style={{ fontSize: '16px', fontWeight: 800 }}>AgriSense Agronomy Experts</span>
+            <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#4caf7d', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+            <span className="font-display" style={{ fontSize: '16px', fontWeight: 800 }}>AgriSense</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={logout}
-              style={{ background: 'transparent', border: 'none', color: '#8aab90', cursor: 'pointer', padding: '4px' }}
+              style={{ background: 'transparent', border: 'none', color: '#8aab90', cursor: 'pointer', padding: '10px', minHeight: '44px', minWidth: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               title="Sign Out"
             >
-              <LogOut className="h-4.5 w-4.5" />
+              <LogOut className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={{ background: 'transparent', border: 'none', color: '#f5efe6', cursor: 'pointer' }}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ background: 'transparent', border: 'none', color: '#f5efe6', cursor: 'pointer', padding: '10px', minHeight: '44px', minWidth: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-label="Open Navigation"
             >
               <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                ) : (
-                  <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                )}
+                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </button>
           </div>
         </header>
 
-        {/* Mobile menu pane */}
-        {mobileMenuOpen && (
+        {/* Dark Overlay Background */}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 90,
+            opacity: mobileMenuOpen ? 1 : 0,
+            visibility: mobileMenuOpen ? 'visible' : 'hidden',
+            transition: 'opacity 0.3s ease, visibility 0.3s ease'
+          }}
+          onClick={() => setMobileMenuOpen(false)}
+        />
+
+        {/* Sliding Drawer */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '85%',
+          maxWidth: '340px',
+          background: 'rgba(12, 30, 19, 0.98)',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.5)',
+          borderRight: '1px solid rgba(245,239,230,0.1)',
+          zIndex: 100,
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Drawer Header */}
           <div style={{
-            background: 'rgba(12, 30, 19, 0.98)',
-            backdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(245,239,230,0.1)',
-            padding: '16px 20px',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            maxHeight: 'calc(100vh - 60px)',
-            overflowY: 'auto'
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '20px',
+            borderBottom: '1px solid rgba(245, 239, 230, 0.08)'
           }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#4caf7d' }} />
+              <span className="font-display" style={{ fontSize: '18px', fontWeight: 800 }}>AgriSense <span style={{ color: '#4caf7d' }}>Nav</span></span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#8aab90', padding: '8px', cursor: 'pointer', minWidth: '44px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
+            >
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Drawer Links */}
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
             {navigationItems.map(item => {
               const active = currentTab === item.id
               return (
@@ -497,13 +552,13 @@ function MainLayout() {
                     textAlign: 'left',
                     cursor: 'pointer',
                     fontWeight: active ? 650 : 500,
-                    fontSize: '13.5px'
+                    fontSize: '15px'
                   }}
                 >
-                  <span>{item.icon}</span>
+                  <span style={{ fontSize: '18px' }}>{item.icon}</span>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   {item.badge > 0 && (
-                    <span className="font-mono-data" style={{ fontSize: '10px', color: '#0f2318', background: item.badgeColor, padding: '1px 6px', borderRadius: '4px' }}>
+                    <span className="font-mono-data" style={{ fontSize: '11px', fontWeight: 700, color: '#0f2318', background: item.badgeColor, padding: '2px 8px', borderRadius: '12px' }}>
                       {item.badge}
                     </span>
                   )}
@@ -511,7 +566,7 @@ function MainLayout() {
               )
             })}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Workspace Frame container */}
@@ -528,7 +583,7 @@ function MainLayout() {
           @media (max-width: 768px) {
             .main-content-area {
               margin-left: 0 !important;
-              padding: 92px 20px 24px 20px !important;
+              padding: 84px 16px 24px 16px !important;
             }
           }
         `}</style>

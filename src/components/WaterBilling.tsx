@@ -74,7 +74,7 @@ export default function WaterBilling() {
                             Resource Economics Summary
                         </span>
                     </div>
-                    <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
+                    <h2 style={{ fontSize: 'clamp(1.5rem, 5vw, 32px)', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
                         Water & Utility Billing
                     </h2>
                     <div style={{ fontSize: '12px', color: '#8aab90', marginTop: '6px' }}>
@@ -87,7 +87,8 @@ export default function WaterBilling() {
                     <button
                         onClick={() => setSelectedCurrency('UGX')}
                         style={{
-                            padding: '6px 12px',
+                            padding: '8px 16px',
+                            minHeight: '44px',
                             borderRadius: '6px',
                             border: 'none',
                             background: selectedCurrency === 'UGX' ? 'rgba(76,175,125,0.2)' : 'transparent',
@@ -103,7 +104,8 @@ export default function WaterBilling() {
                     <button
                         onClick={() => setSelectedCurrency('USD')}
                         style={{
-                            padding: '6px 12px',
+                            padding: '8px 16px',
+                            minHeight: '44px',
                             borderRadius: '6px',
                             border: 'none',
                             background: selectedCurrency === 'USD' ? 'rgba(76,175,125,0.2)' : 'transparent',
@@ -120,7 +122,7 @@ export default function WaterBilling() {
             </div>
 
             {/* Main Billing KPI Blocks */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '16px', marginBottom: '24px' }}>
 
                 {/* Metric 1: Monthly Cost Projected */}
                 <div style={{ background: 'rgba(22, 46, 30, 0.4)', backdropFilter: 'blur(10px)', border: '1px solid rgba(245, 239, 230, 0.08)', borderRadius: '12px', padding: '20px' }}>
@@ -176,7 +178,7 @@ export default function WaterBilling() {
             </div>
 
             {/* Main Grid: Analytical Chart & Consumer List */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '20px', alignItems: 'start' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
                 {/* Weekly Consumption Graph */}
                 <div style={{ background: 'rgba(22, 46, 30, 0.3)', backdropFilter: 'blur(10px)', border: '1px solid rgba(245, 239, 230, 0.08)', borderRadius: '12px', padding: '24px' }}>
@@ -275,7 +277,8 @@ export default function WaterBilling() {
                                             color: '#4caf7d',
                                             fontSize: '11px',
                                             fontWeight: 600,
-                                            padding: '2px 6px',
+                                            padding: '8px 12px',
+                                            minHeight: '44px',
                                             cursor: 'pointer',
                                             fontFamily: 'DM Sans, sans-serif'
                                         }}
@@ -330,7 +333,8 @@ export default function WaterBilling() {
                                     color: '#4caf7d',
                                     fontSize: '11px',
                                     fontWeight: 600,
-                                    padding: '6px 12px',
+                                    padding: '8px 12px',
+                                    minHeight: '44px',
                                     cursor: 'pointer',
                                     fontFamily: 'DM Sans, sans-serif'
                                 }}
@@ -389,7 +393,8 @@ export default function WaterBilling() {
                                                 color: '#4caf7d',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
-                                                padding: '5px',
+                                                padding: '10px',
+                                                minHeight: '44px',
                                                 cursor: 'pointer',
                                                 fontFamily: 'DM Sans, sans-serif'
                                             }}
