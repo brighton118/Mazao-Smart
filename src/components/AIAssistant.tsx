@@ -120,7 +120,7 @@ export default function AIAssistant() {
 
         // Try to query the RAG FastAPI backend
         try {
-            const response = await fetch('http://localhost:8445/api/chat', {
+            const response = await fetch('http://localhost:8445/api/chat/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -139,22 +139,48 @@ export default function AIAssistant() {
                 throw new Error("RAG API server response error")
             }
 
-            const data = await response.json()
-            if (data.error && data.error.includes("Gemini API key")) {
-                // If API Key is missing or there's an error payload, show the error response and fallback
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await response.json();
+                setIsTyping(false);
                 setMessages(prev => [...prev, {
                     id: `ai-${Date.now()}`,
                     sender: 'ai',
-                    text: data.response || "No API key configured for Gemini RAG.",
+                    text: data.response || data.error || "No API key configured for Gemini RAG.",
                     timestamp: new Date()
-                }])
-            } else {
-                setMessages(prev => [...prev, {
-                    id: `ai-${Date.now()}`,
-                    sender: 'ai',
-                    text: data.response,
-                    timestamp: new Date()
-                }])
+                }]);
+                return;
+            }
+
+            setIsTyping(false);
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error("No readable stream");
+
+            const decoder = new TextDecoder("utf-8");
+            let accumulatedText = "";
+            let messageId = `ai-${Date.now()}`;
+
+            setMessages(prev => [...prev, {
+                id: messageId,
+                sender: 'ai',
+                text: "",
+                timestamp: new Date()
+            }]);
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                accumulatedText += decoder.decode(value, { stream: true });
+
+                setMessages(prev => {
+                    const newMsgs = [...prev];
+                    const msgIndex = newMsgs.findIndex(m => m.id === messageId);
+                    if (msgIndex !== -1) {
+                        newMsgs[msgIndex].text = accumulatedText;
+                    }
+                    return newMsgs;
+                });
             }
         } catch (error) {
             console.warn("FastAPI RAG server offline or failed. Falling back to local offline logic...", error)

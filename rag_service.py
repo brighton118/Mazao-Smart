@@ -2,6 +2,7 @@ import os
 import argparse
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -277,6 +278,102 @@ async def reset_password(req: ResetPasswordRequest):
         return {"status": "success", "message": "Password reset successfully. You can now login with your new password."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/stream")
+async def chat_stream_endpoint(request: ChatRequest):
+    # Determine API key
+    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not gemini_key:
+        return {
+            "error": "Gemini API key is not configured.",
+            "response": "ERROR: Gemini API Key is missing. Please add a `.env` file containing `GEMINI_API_KEY=your_key` to start the vector RAG assistant."
+        }
+
+    try:
+        # 1. Retrieve relevant documentation from Chroma
+        retrieved_context = ""
+        if vectorstore:
+            results = vectorstore.similarity_search(request.query, k=3)
+            retrieved_context = "\n\n".join([f"--- Source: {doc.metadata.get('source', 'unknown')} ---\n{doc.page_content}" for doc in results])
+        
+        # 2. Extract Real-Time Telemetry Context from Frontend Payload
+        sim_state = request.state
+        sensors_list = sim_state.get("sensors", [])
+        
+        sensors_summary = []
+        for s in sensors_list:
+            status_desc = f"Moisture: {s.get('moisture')}% (min: {s.get('minMoisture')}%, max: {s.get('maxMoisture')}%), Temp: {s.get('temp')}°C, Online: {s.get('online')}, Irrigating: {s.get('irrigating')}"
+            sensors_summary.append(f"- Node {s.get('id')} ({s.get('plot')} - {s.get('crop')}): {status_desc}")
+            
+        sensors_str = "\n".join(sensors_summary) if sensors_summary else "No active sensors registered."
+        
+        alerts_list = sim_state.get("log", [])
+        active_alerts = [log.get("message") for log in alerts_list if log.get("type") == "alert"]
+        alerts_str = "\n".join([f"- {alert}" for alert in active_alerts]) if active_alerts else "No active sensor warning alerts."
+        
+        realtime_telemetry = f"""
+WEATHER STATS:
+- Current Weather Condition: {sim_state.get('weather', 'sunny').upper()}
+- Solar Array Output: {sim_state.get('solarOutput', 0)} Watts
+- Center Battery Level: {sim_state.get('batteryLevel', 0)}%
+- Water Tank Level: {sim_state.get('tankLevel', 0)} / 5,000 Litres ({(sim_state.get('tankLevel', 0)/5000*100):.1f}% full)
+- Central Pump Status: {"ACTIVE (Vibrating)" if sim_state.get('pumpActive', False) else "INACTIVE (0 RPM)"}
+
+SENSOR NODES STATUS:
+{sensors_str}
+
+ACTIVE TELEMETRY ALERTS:
+{alerts_str}
+        """
+
+        # 3. Formulate Prompt
+        system_instruction = f"""You are AgriSense AI, a highly specialized, context-aware digital agronomist and automated assistant for our Soil Moisture Monitoring System dashboard.
+You must answer queries using a combination of the retrieved system documentation and the live telemetry state of the farm.
+
+Retrieved System & Hardware Documentation:
+=========================================
+{retrieved_context}
+=========================================
+
+Current Farm Telemetry State:
+============================
+{realtime_telemetry}
+============================
+
+Instructions:
+1. Ground your answers in the retrieved documentation and the live telemetry. Be precise but VERY SHORT.
+2. If any node is displaying critical moisture, prioritize a brief warning and swift instructions.
+3. If reservoir tank levels are under 20%, concisely remind the operator of dry run hazards.
+4. Keep your responses HIGHLY SUMMARIZED. Use short bullet points. Do NOT generate lengthy reports.
+5. Answer questions directly in as few words as possible without missing critical facts.
+6. Address the user directly. ALWAYS prefer extreme brevity (max 1-3 short paragraphs).
+"""
+
+        # 4. Integrate LLM with google-generativeai
+        genai.configure(api_key=gemini_key)
+        
+        model = genai.GenerativeModel(
+            model_name="gemini-3.5-flash",
+            system_instruction=system_instruction
+        )
+        
+        chat = model.start_chat()
+        
+        # Call Gemini API with stream=True
+        response = chat.send_message(request.query, stream=True)
+        
+        def generate():
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+
+        return StreamingResponse(generate(), media_type="text/plain")
+        
+    except Exception as e:
+        print(f"Error querying Gemini: {e}")
+        def error_gen():
+            yield f"ERROR: The AI Copilot encountered an error querying the Gemini API model: '{str(e)}'."
+        return StreamingResponse(error_gen(), media_type="text/plain")
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
