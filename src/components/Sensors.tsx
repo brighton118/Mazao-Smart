@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 function WaterParticles({ active }: { active: boolean }) {
@@ -219,96 +219,10 @@ Telemetry Readings:
             </mesh>
 
             {/* Display floating tag label */}
-            <Html position={[0, 0.85, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    backdropFilter: 'blur(8px)',
-                    color: '#f1f5f9',
-                    padding: '8px 10px',
-                    borderRadius: '6px',
-                    minWidth: '130px',
-                    border: `1px solid ${color}`,
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                    boxShadow: `0 4px 12px rgba(0,0,0,0.6), 0 0 10px ${color}44`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.05em' }}>Node {id}</span>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}` }} />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '9px', color: '#94a3b8' }}>Moisture:</span>
-                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: isOnline ? '#fff' : '#ef4444' }}>
-                            {isOnline ? `${moisture.toFixed(1)}%` : 'OFFLINE'}
-                        </span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '9px', color: '#94a3b8' }}>Status:</span>
-                        <span style={{ fontSize: '9px', fontWeight: 'bold', color: color, textTransform: 'uppercase' }}>
-                            {isOnline ? node?.status : 'ERR'}
-                        </span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', paddingTop: '4px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                        <span style={{ fontSize: '8px', color: '#64748b' }}>Updated:</span>
-                        <span style={{ fontSize: '8px', color: '#cbd5e1' }}>
-                            {state.lastSyncAt ? state.lastSyncAt.toLocaleTimeString([], { hour12: false }) : 'N/A'}
-                        </span>
-                    </div>
-
-                    {/* Manual override button if in manual mode */}
-                    {node?.mode === 'manual' && (
-                        <div style={{ marginTop: '4px', textAlign: 'center', pointerEvents: 'auto' }}>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    dispatch({ type: 'TOGGLE_VALVE', id });
-                                }}
-                                style={{
-                                    background: isIrrigating ? '#ef4444' : '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '3px',
-                                    padding: '2px 8px',
-                                    fontSize: '9px',
-                                    cursor: 'pointer',
-                                    width: '100%',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                {isIrrigating ? 'Stop Water' : 'Start Water'}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </Html>
+            {/* Removed tooltip overlay as per user request */}
 
             {/* AI Decision Event Log Popup (Visible for 15s) */}
-            {showLog && latestLog && (
-                <Html position={[0, 1.25, 0]} center distanceFactor={8}>
-                    <div style={{
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(16, 185, 129, 0.6)',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        color: '#f8fafc',
-                        fontSize: '9px',
-                        fontWeight: 'bold',
-                        maxWidth: '220px',
-                        textAlign: 'center',
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
-                        pointerEvents: 'none',
-                    }}>
-                        {latestLog.message}
-                    </div>
-                </Html>
-            )}
+            {/* Removed log popup as per user request */}
         </group>
     )
 }

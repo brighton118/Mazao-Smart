@@ -54,13 +54,12 @@ export const HARDWARE_SPECS: Record<string, HardwareSpec> = {
     weather: {
         modelName: "MeteoStake-Pro V3",
         manufacturer: "AgriSense Instruments",
-        description: "Unified agricultural microclimate transmitter collecting surface wind metrics, precipitation accumulation, humidity, and atmospheric pressure.",
+        description: "Unified agricultural microclimate transmitter collecting surface wind metrics, precipitation accumulation, and atmospheric pressure.",
         specifications: {
             "Anemometer Type": "3-Cup Physical Rotor",
             "Wind Speed Accuracy": "±0.3 m/s",
             "Rain Gauge": "Self-emptying tipping bucket (0.2mm resolution)",
             "Air Temperature Range": "-40°C to +65°C (±0.2°C)",
-            "Relative Humidity": "0 to 100% RH (±1.5%)",
             "Barometric Sensor": "MEMS Piezo-resistive",
             "Telemetry Protocol": "LoraWAN Class A (868 MHz)",
             "Solar Aux Power": "2W Integrated PV"

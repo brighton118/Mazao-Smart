@@ -9,7 +9,6 @@ const DashboardOverview = lazy(() => import('./components/DashboardOverview'))
 const GreenhousesPanel = lazy(() => import('./components/GreenhousesPanel'))
 const OutdoorPanel = lazy(() => import('./components/OutdoorPanel'))
 const SensorManagement = lazy(() => import('./components/SensorManagement'))
-const WaterBilling = lazy(() => import('./components/WaterBilling'))
 const SystemAlerts = lazy(() => import('./components/SystemAlerts'))
 const AIAssistant = lazy(() => import('./components/AIAssistant'))
 const Dashboard3D = lazy(() => import('./components/Dashboard3D'))
@@ -75,8 +74,7 @@ function MainLayout() {
     { id: 'greenhouses', label: 'Greenhouse Complex', icon: '🏘️', badge: greenhouseAlerts, badgeColor: '#e05a4e' },
     { id: 'gardens', label: 'Outdoor Gardens', icon: '🌽', badge: gardenAlerts, badgeColor: '#e8a042' },
     { id: 'sensors', label: 'Node Registry', icon: '💾', badge: offlineSensorsCount, badgeColor: '#8aab90' },
-    { id: 'billing', label: 'Water Economics', icon: '💧', badge: 0, badgeColor: '#4caf7d' },
-    { id: 'alerts', label: 'System Rules & Log', icon: '🚨', badge: activeAlertsCount, badgeColor: '#e05a4e' },
+    { id: 'alerts', label: 'Notifications', icon: '🚨', badge: activeAlertsCount, badgeColor: '#e05a4e' },
     { id: 'ai-assistant', label: 'AgriSense AI', icon: '🤖', badge: 0, badgeColor: '#4caf7d' },
     { id: 'settings', label: 'System Settings', icon: '⚙️', badge: 0, badgeColor: '#4caf7d' },
   ]
@@ -181,8 +179,6 @@ function MainLayout() {
         return <OutdoorPanel />
       case 'sensors':
         return <SensorManagement />
-      case 'billing':
-        return <WaterBilling />
       case 'alerts':
         return <SystemAlerts />
       case 'ai-assistant':

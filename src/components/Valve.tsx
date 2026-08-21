@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface ValveProps {
@@ -73,24 +73,7 @@ export default function Valve({ position, sensorId, onSelectComponent }: ValvePr
                 <meshBasicMaterial color={isOpen ? '#2ecc71' : '#e74c3c'} />
             </mesh>
 
-            {/* Description tag */}
-            <Html position={[0, 0.45, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(3px)',
-                    color: isOpen ? '#2ecc71' : '#c0392b',
-                    padding: '2px 4px',
-                    borderRadius: '3px',
-                    fontSize: '7px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(0, 0, 0, 0.2)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    Valve {sensorId} ({isOpen ? 'OPEN' : 'CLOSED'})
-                </div>
-            </Html>
+            {/* Removed Html HUD overlay as per user request */}
         </group>
     )
 }

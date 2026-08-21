@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface SolarSystemProps {
@@ -98,24 +98,7 @@ Smart Charge Controller:
                 </group>
             </group>
 
-            {/* Floating HUD status */}
-            <Html position={[0, 1.8, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(3px)',
-                    color: '#f1c40f',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(241, 196, 15, 0.3)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    450W solar array ({state.solarOutput}W)
-                </div>
-            </Html>
+            {/* Removed floating HUD status as per user request */}
         </group>
     )
 }

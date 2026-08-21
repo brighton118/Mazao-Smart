@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface PumpProps {
@@ -84,25 +84,7 @@ Pump Controller:
                 </mesh>
             </group>
 
-            {/* Description tag */}
-            <Html position={[0, 0.7, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(3px)',
-                    color: state.pumpActive ? '#2ecc71' : '#a0aec0',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(46, 204, 113, 0.3)',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                    transition: 'all 0.3s ease'
-                }}>
-                    12V Water Pump ({state.pumpActive ? 'ON' : 'OFF'})
-                </div>
-            </Html>
+            {/* Removed description tag as per user request */}
         </group>
     )
 }

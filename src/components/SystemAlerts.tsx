@@ -124,7 +124,7 @@ export default function SystemAlerts() {
                         </span>
                     </div>
                     <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#f5efe6', textTransform: 'uppercase', margin: 0 }} className="font-display">
-                        System Alerts & Rules
+                        Notifications
                     </h2>
                     <div style={{ fontSize: '12px', color: '#8aab90', marginTop: '6px' }}>
                         Telemetry dispatch center for edge automation contracts and log audits.

@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface ServerHouseProps {
@@ -105,24 +105,7 @@ LoRa Radio:
                 </mesh>
             </group>
 
-            {/* Floating specification tooltip */}
-            <Html position={[0, 3.8, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(4px)',
-                    color: '#38bdf8',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    LoRa Gateway Node
-                </div>
-            </Html>
+            {/* Removed floating specification tooltip as per user request */}
         </group>
     )
 }

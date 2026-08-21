@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface WaterTankProps {
@@ -128,24 +128,7 @@ Auxiliary Fertigation Reservoir:
                 </group>
             </group>
 
-            {/* Floating HUD status */}
-            <Html position={[0, 4.8, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(4px)',
-                    color: '#00d2d3',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(0, 210, 211, 0.4)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    5,000L Water Tower ({state.tankLevel}L)
-                </div>
-            </Html>
+            {/* Removed floating HUD status as per user request */}
         </group>
     )
 }

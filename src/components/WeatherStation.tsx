@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+
 import { useSimulation } from '../context/SimulationContext'
 
 interface WeatherStationProps {
@@ -55,7 +55,6 @@ export default function WeatherStation({ position, onSelectComponent }: WeatherS
             `Sensors Logged:
 - Anemometer: Wind Speed (${state.weather === 'windy' ? '18.4' : '3.2'} m/s)
 - Wind Vane: Direction (ENE)
-- Barometer / Hygrometer: Humidity (${state.weather === 'rainy' ? '92' : '64'}%)
 - Rain Gauge: Precipitation (${state.weather === 'rainy' ? '12.0 mm/hr' : '0.0 mm'})
 - Ambient Temperature: ${state.sensors[0]?.temp ?? 24}°C
 
@@ -140,24 +139,7 @@ Hardware Controller:
                 </points>
             )}
 
-            {/* Floating HUD status */}
-            <Html position={[0, 2.8, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(3px)',
-                    color: '#e74c3c',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(231, 76, 60, 0.3)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    Weather Unit ({state.weather.toUpperCase()})
-                </div>
-            </Html>
+            {/* Removed floating HUD status as per user request */}
         </group>
     )
 }

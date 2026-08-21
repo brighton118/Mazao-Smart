@@ -1,4 +1,4 @@
-import { Html } from '@react-three/drei'
+
 import { SensorNode } from '../context/SimulationContext'
 
 interface OutdoorFarmProps {
@@ -137,24 +137,7 @@ Zone Layout:
                 <meshStandardMaterial color="#7f8c8d" />
             </mesh>
 
-            {/* Description tag */}
-            <Html position={[0, 1.2, 0]} center distanceFactor={8}>
-                <div style={{
-                    background: 'rgba(30, 41, 59, 0.7)',
-                    backdropFilter: 'blur(3px)',
-                    color: '#2ecc71',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '9px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    border: '1px solid rgba(46, 204, 113, 0.3)',
-                    pointerEvents: 'none',
-                    userSelect: 'none'
-                }}>
-                    Open Crop Fields (Maize & Sorghum)
-                </div>
-            </Html>
+            {/* Removed description tag as per user request */}
         </group>
     )
 }
