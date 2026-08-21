@@ -265,7 +265,6 @@ function MainLayout() {
         background: 'rgba(15, 35, 24, 0.75)',
         backdropFilter: 'blur(12px)',
         borderRight: '1px solid rgba(245, 239, 230, 0.08)',
-        display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
         top: 0,
