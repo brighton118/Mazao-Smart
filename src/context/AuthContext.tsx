@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { auth, db } from '../lib/firebase'
+import {
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    updatePassword,
+    sendPasswordResetEmail
+} from 'firebase/auth'
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'
 
 export interface User {
     id: string
@@ -42,86 +51,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState<boolean>(true)
 
-    // Helper: fetch user profile from public schema and return mapped values.
+    // Helper: fetch user profile from Firestore
     const fetchUserProfile = async (userId: string, email: string): Promise<User | null> => {
         try {
-            // Fetch profile
-            let { data: profile, error: profileErr } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', userId)
-                .single()
+            const userDocRef = doc(db, 'users', userId)
+            const userSnap = await getDoc(userDocRef)
 
-            if (profileErr || !profile) {
-                console.warn('Could not fetch public profile from users table, attempting fallback creation:', profileErr)
+            if (!userSnap.exists()) {
+                console.warn('Could not fetch profile from users collection, attempting fallback creation.')
 
-                // Attempt to auto-create the missing public profile using Auth metadata
-                const { data: { user: authUser } } = await supabase.auth.getUser()
-                if (authUser && authUser.id === userId) {
-                    const meta = authUser.user_metadata || {}
+                // Ensure there is an auth user matching
+                if (auth.currentUser && auth.currentUser.uid === userId) {
                     const newProfile = {
                         id: userId,
-                        email: email || authUser.email,
-                        username: meta.username || (email ? email.split('@')[0] : 'user_' + Math.floor(Math.random() * 1000)),
-                        full_name: meta.full_name || '',
-                        phone: meta.phone || '',
-                        role: meta.role || 'Farmer',
-                        preferred_language: 'en'
+                        email: email || auth.currentUser.email || '',
+                        username: email ? email.split('@')[0] : 'user_' + Math.floor(Math.random() * 1000),
+                        full_name: auth.currentUser.displayName || '',
+                        phone: auth.currentUser.phoneNumber || '',
+                        role: 'Farmer',
+                        preferred_language: 'en',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        account_status: 'active'
                     }
 
-                    const { error: insertErr } = await supabase.from('users').insert([newProfile])
+                    await setDoc(userDocRef, newProfile)
 
-                    if (!insertErr) {
-                        // Auto-create farm if data exists
-                        if (meta.farm_location || meta.farm_name) {
-                            try {
-                                let dist = 'Mbarara', vill = 'Ruti'
-                                if (typeof meta.farm_location === 'string') {
-                                    try {
-                                        const parsed = JSON.parse(meta.farm_location)
-                                        dist = parsed.district || dist
-                                        vill = parsed.village || vill
-                                    } catch {
-                                        const parts = meta.farm_location.split(',')
-                                        if (parts.length > 0) vill = parts[0].trim()
-                                        if (parts.length > 1) dist = parts[1].trim()
-                                    }
-                                }
-                                await supabase.from('farms').insert([{
-                                    owner_id: userId,
-                                    farm_name: meta.farm_name || 'My Farm',
-                                    district: dist,
-                                    village: vill
-                                }])
-                            } catch (e) {
-                                console.warn('Could not auto-create farm', e)
-                            }
-                        }
-
-                        // Fetch the freshly created profile
-                        const { data: refreshedProfile } = await supabase.from('users').select('*').eq('id', userId).single()
-                        if (refreshedProfile) {
-                            profile = refreshedProfile
-                            profileErr = null
-                        } else {
-                            return null
-                        }
-                    } else {
-                        console.error('Failed to auto-create user profile in public table:', insertErr)
-                        return null
+                    // Auto-create farm
+                    try {
+                        const farmRef = doc(collection(db, 'farms'))
+                        await setDoc(farmRef, {
+                            owner_id: userId,
+                            farm_name: 'My Farm',
+                            district: 'Mbarara',
+                            village: 'Ruti'
+                        })
+                    } catch (e) {
+                        console.warn('Could not auto-create farm', e)
                     }
+
+                    return { ...newProfile, farm_name: 'My Farm', farm_location: 'Ruti, Mbarara' } as User
                 } else {
                     return null
                 }
             }
 
-            // Fetch farm info if it exists
-            const { data: farms } = await supabase
-                .from('farms')
-                .select('*')
-                .eq('owner_id', userId)
+            const profile = userSnap.data()
 
-            const farm = (farms && farms.length > 0) ? farms[0] : null
+            // Fetch farm info if it exists
+            const farmsRef = collection(db, 'farms')
+            const q = query(farmsRef, where('owner_id', '==', userId))
+            const farmsSnap = await getDocs(q)
+
+            let farm = null
+            if (!farmsSnap.empty) {
+                farm = farmsSnap.docs[0].data()
+            }
+
             let farmLocationStr = ''
             if (farm) {
                 farmLocationStr = farm.village && farm.district
@@ -135,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 username: profile.username,
                 email: profile.email || email,
                 phone: profile.phone || '',
-                role: profile.role as any,
+                role: profile.role,
                 farm_name: farm?.farm_name || '',
                 farm_location: farmLocationStr,
                 profile_image: profile.profile_image || null,
@@ -143,8 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 preferred_language: profile.preferred_language || 'en',
                 created_at: profile.created_at,
                 updated_at: profile.updated_at,
-                account_status: 'active'
-            }
+                account_status: profile.account_status || 'active'
+            } as User
         } catch (err) {
             console.error('Failed to map and fetch user profiles from database:', err)
             return null
@@ -153,104 +139,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Subscribe to auth state changes on mount
     useEffect(() => {
-        let isMounted = true
-
-        const initializeAuth = async () => {
-            try {
-                // Check if Supabase is configured before making any network calls
-                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-                const supabaseConfigured = !!supabaseUrl && !supabaseUrl.includes('placeholder')
-
-                if (supabaseConfigured) {
-                    const { data: { session } } = await supabase.auth.getSession()
-                    if (session) {
-                        const matchedUser = await fetchUserProfile(session.user.id, session.user.email || '')
-                        if (isMounted) {
-                            if (matchedUser) {
-                                setUser(matchedUser)
-                                setToken(session.access_token)
-                                localStorage.setItem('agrisense_token', session.access_token)
-                                localStorage.setItem('agrisense_refresh_token', session.refresh_token || '')
-                                localStorage.setItem('agrisense_user', JSON.stringify(matchedUser))
-                            } else {
-                                const cachedUser = localStorage.getItem('agrisense_user')
-                                if (cachedUser) {
-                                    setUser(JSON.parse(cachedUser))
-                                }
-                                setToken(session.access_token)
-                            }
-                        }
-                    } else {
-                        // Restore offline session if one exists
-                        const storedToken = localStorage.getItem('agrisense_token')
-                        const storedUser = localStorage.getItem('agrisense_user')
-                        if (storedToken && storedToken.startsWith('offline_') && storedUser) {
-                            if (isMounted) {
-                                setUser(JSON.parse(storedUser))
-                                setToken(storedToken)
-                            }
-                        }
-                    }
-                } else {
-                    // Supabase not configured — restore cached offline session if one exists
-                    console.warn('Supabase not configured. Restoring offline session if available.')
-                    const storedToken = localStorage.getItem('agrisense_token')
-                    const storedUser = localStorage.getItem('agrisense_user')
-                    if (storedToken && storedUser) {
-                        if (isMounted) {
-                            setUser(JSON.parse(storedUser))
-                            setToken(storedToken)
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Error initializing auth:', err)
-                // Even on error, try restoring cached offline session
-                const storedToken = localStorage.getItem('agrisense_token')
-                const storedUser = localStorage.getItem('agrisense_user')
-                if (storedToken && storedUser && isMounted) {
-                    setUser(JSON.parse(storedUser))
-                    setToken(storedToken)
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false)
-                }
-            }
-        }
-
-        initializeAuth()
-
-        // Auth state subscription
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                const matchedUser = await fetchUserProfile(session.user.id, session.user.email || '')
-                if (isMounted && matchedUser) {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const matchedUser = await fetchUserProfile(firebaseUser.uid, firebaseUser.email || '')
+                if (matchedUser) {
                     setUser(matchedUser)
-                    setToken(session.access_token)
-                    localStorage.setItem('agrisense_token', session.access_token)
+                    const userToken = await firebaseUser.getIdToken()
+                    setToken(userToken)
+                    localStorage.setItem('agrisense_token', userToken)
                     localStorage.setItem('agrisense_user', JSON.stringify(matchedUser))
                 }
-            } else if (event === 'SIGNED_OUT') {
-                if (isMounted) {
+            } else {
+                // Not authenticated
+                const storedToken = localStorage.getItem('agrisense_token')
+                const storedUser = localStorage.getItem('agrisense_user')
+                if (storedToken && storedToken.startsWith('offline_') && storedUser) {
+                    setUser(JSON.parse(storedUser))
+                    setToken(storedToken)
+                } else {
                     setUser(null)
                     setToken(null)
                     localStorage.removeItem('agrisense_token')
                     localStorage.removeItem('agrisense_refresh_token')
                     localStorage.removeItem('agrisense_user')
                 }
-            } else if (event === 'TOKEN_REFRESHED' && session) {
-                if (isMounted) {
-                    setToken(session.access_token)
-                    localStorage.setItem('agrisense_token', session.access_token)
-                }
             }
+            setIsLoading(false)
         })
 
-        return () => {
-            isMounted = false
-            subscription.unsubscribe()
-        }
+        return () => unsubscribe()
     }, [])
 
     const clearSession = () => {
@@ -259,12 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('agrisense_token')
         localStorage.removeItem('agrisense_refresh_token')
         localStorage.removeItem('agrisense_user')
-    }
-
-    // Helper: check if Supabase is properly configured (not using placeholder URL)
-    const isSupabaseConfigured = (): boolean => {
-        const url = import.meta.env.VITE_SUPABASE_URL
-        return !!url && !url.includes('placeholder')
     }
 
     // Helper: perform offline mock login for known demo accounts
@@ -304,29 +215,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             )
             return { success: true }
         }
-        return null // not a known mock account
+        return null
     }
 
     const login = async (usernameOrEmail: string, password: string) => {
         try {
-            // If Supabase is not configured, immediately use offline mock login
-            if (!isSupabaseConfigured()) {
-                console.warn('Supabase not configured — using offline fallback login.')
-                const mockResult = tryOfflineMockLogin(usernameOrEmail, password)
-                if (mockResult) return mockResult
-                return { success: false, error: 'Supabase is not configured. Use demo accounts: admin, farmer1, agronomist1, or technician1.' }
-            }
-
             let email = usernameOrEmail.trim()
 
-            // If it is a username, query the public.users database to find the email
             if (!email.includes('@')) {
+                // If it is a username, query the users collection to find the email
                 try {
-                    // We must use a Postgres function (RPC) because RLS blocks anonymous read access to public.users
-                    const { data, error: rpcError } = await supabase.rpc('get_email_by_username', { p_username: email })
+                    const usersRef = collection(db, 'users')
+                    const q = query(usersRef, where('username', '==', email))
+                    const querySnapshot = await getDocs(q)
 
-                    if (!rpcError && data) {
-                        email = Array.isArray(data) ? data[0] : data
+                    if (!querySnapshot.empty) {
+                        const userData = querySnapshot.docs[0].data()
+                        if (userData.email) {
+                            email = userData.email
+                        }
                     }
                 } catch (lookupErr) {
                     console.warn('Username lookup failed, trying fallback emails:', lookupErr)
@@ -346,28 +253,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
 
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            })
-
-            if (authError) {
-                // Supabase returned an error — try offline fallback for mock profiles
-                const mockResult = tryOfflineMockLogin(usernameOrEmail, password)
-                if (mockResult) return mockResult
-                return { success: false, error: authError.message }
+            if (!email.includes('@')) {
+                email = `${email.toLowerCase()}@agrisense.io`
             }
 
-            if (!authData.session) {
-                return { success: false, error: 'Login session could not be established.' }
-            }
+            const userCredential = await signInWithEmailAndPassword(auth, email, password)
+            const firebaseUser = userCredential.user
 
-            const profile = await fetchUserProfile(authData.user.id, authData.user.email || '')
+            const profile = await fetchUserProfile(firebaseUser.uid, firebaseUser.email || '')
             if (profile) {
                 setUser(profile)
-                setToken(authData.session.access_token)
-                localStorage.setItem('agrisense_token', authData.session.access_token)
-                localStorage.setItem('agrisense_refresh_token', authData.session.refresh_token || '')
+                const userToken = await firebaseUser.getIdToken()
+                setToken(userToken)
+                localStorage.setItem('agrisense_token', userToken)
                 localStorage.setItem('agrisense_user', JSON.stringify(profile))
             }
 
@@ -381,85 +279,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         } catch (e: any) {
             console.error('Error logging in:', e)
-            // Network-level error — try offline fallback before giving up
             const mockResult = tryOfflineMockLogin(usernameOrEmail, password)
             if (mockResult) return mockResult
-            return { success: false, error: e.message || 'Authorization server offline.' }
+            return { success: false, error: e.message || 'Authorization server error.' }
         }
     }
 
     const register = async (data: Partial<User> & { password: string }) => {
-        console.log('--- STARTING SIGNUP FLOW ---')
         try {
-            // Check if backend is offline or if using mockup
-            const supabasePlaceholder = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
-            if (supabasePlaceholder) {
-                console.log('[Signup] Offline Mode: Registration simulated successfully.')
-                window.dispatchEvent(
-                    new CustomEvent('mazaosmart-toast', {
-                        detail: { message: 'Offline Mode: Registration simulated successfully.', type: 'info' }
-                    })
-                )
-                return { success: true }
-            }
-
-            // Extract farm location details to write to metadata
             let farmDistrict = 'Mbarara'
             let farmVillage = 'Ruti'
-            let farmGps = '-0.6074, 30.6548'
             if (data.farm_location) {
                 try {
                     const parsed = JSON.parse(data.farm_location)
                     farmDistrict = parsed.district || farmDistrict
                     farmVillage = parsed.village || farmVillage
-                    farmGps = parsed.gps || farmGps
                 } catch {
-                    // raw string format
                     const locationParts = data.farm_location.split(',')
                     if (locationParts.length > 0) farmVillage = locationParts[0].trim()
                     if (locationParts.length > 1) farmDistrict = locationParts[1].trim()
                 }
             }
 
-            console.log('[Signup] Calling Supabase auth.signUp with email:', data.email)
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: data.email!,
-                password: data.password,
-                options: {
-                    data: {
-                        role: data.role || 'Farmer',
-                        full_name: data.full_name || '',
-                        username: data.username || '',
-                        phone: data.phone || '',
-                        farm_name: data.farm_name || '',
-                        farm_location: JSON.stringify({
-                            district: farmDistrict,
-                            village: farmVillage,
-                            gps: farmGps
-                        })
-                    }
-                }
+            let registerEmail = data.email || ''
+            if (registerEmail && !registerEmail.includes('@')) {
+                registerEmail = `${registerEmail.toLowerCase()}@agrisense.io`
+            }
+
+            const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, data.password)
+            const firebaseUser = userCredential.user
+
+            // Manually insert into Firestore users collection
+            const userRef = doc(db, 'users', firebaseUser.uid)
+            await setDoc(userRef, {
+                id: firebaseUser.uid,
+                email: data.email,
+                role: data.role || 'Farmer',
+                full_name: data.full_name || '',
+                username: data.username || '',
+                phone: data.phone || '',
+                preferred_language: 'en',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                account_status: 'active'
             })
 
-            console.log('[Signup] Response received.')
-            console.log('[Signup] Data:', authData)
-            console.log('[Signup] Error:', authError)
+            // Manually create farm document
+            const newFarmRef = doc(collection(db, 'farms'))
+            await setDoc(newFarmRef, {
+                owner_id: firebaseUser.uid,
+                farm_name: data.farm_name || 'My Farm',
+                district: farmDistrict,
+                village: farmVillage
+            })
 
-            if (authError) {
-                console.error('[Signup] Error existing from signUp:', authError.message)
-                return { success: false, error: authError.message }
-            }
-
-            if (!authData.user || !authData.user.id) {
-                console.error('[Signup] Fake success detected: No user object inside authData despite no error.')
-                return { success: false, error: 'Registration failed silently: User object was missing in the server response.' }
-            }
-
-            console.log(`[Signup] User ID successfully generated: ${authData.user.id}`)
-
-            console.log('[Signup] No manual DB profile insertions required - Supabase PostgreSQL Trigger handles this automatically.');
-
-            console.log('[Signup] Registration logic concluded safely. Triggering success toast.')
             window.dispatchEvent(
                 new CustomEvent('mazaosmart-toast', {
                     detail: { message: 'Registration succeeded!', type: 'success' }
@@ -477,7 +350,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = async () => {
         try {
             if (token && !token.startsWith('offline_')) {
-                await supabase.auth.signOut()
+                await signOut(auth)
             }
         } catch (e) {
             console.error('Error signing out:', e)
@@ -502,20 +375,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         try {
-            // 1. Update public.users
-            const { error: userErr } = await supabase
-                .from('users')
-                .update({
-                    full_name: data.full_name,
-                    username: data.username,
-                    phone: data.phone,
-                    preferred_language: data.preferred_language
-                })
-                .eq('id', user.id)
+            const userRef = doc(db, 'users', user.id)
+            await updateDoc(userRef, {
+                full_name: data.full_name,
+                username: data.username,
+                phone: data.phone,
+                preferred_language: data.preferred_language,
+                updated_at: new Date().toISOString()
+            })
 
-            if (userErr) throw userErr
-
-            // 2. Update public.farms if farm fields are updated
+            // Update farms if changed
             if (data.farm_name || data.farm_location) {
                 let district = 'Mbarara'
                 let village = 'Ruti'
@@ -525,46 +394,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (parts.length > 1) district = parts[1].trim()
                 }
 
-                const { data: farms } = await supabase
-                    .from('farms')
-                    .select('id')
-                    .eq('owner_id', user.id)
+                const farmsRef = collection(db, 'farms')
+                const q = query(farmsRef, where('owner_id', '==', user.id))
+                const farmsSnap = await getDocs(q)
 
-                if (farms && farms.length > 0) {
-                    await supabase
-                        .from('farms')
-                        .update({
-                            farm_name: data.farm_name || user.farm_name,
-                            district,
-                            village
-                        })
-                        .eq('owner_id', user.id)
+                if (!farmsSnap.empty) {
+                    const farmDoc = farmsSnap.docs[0]
+                    await updateDoc(farmDoc.ref, {
+                        farm_name: data.farm_name || user.farm_name,
+                        district,
+                        village
+                    })
                 } else {
-                    await supabase
-                        .from('farms')
-                        .insert({
-                            owner_id: user.id,
-                            farm_name: data.farm_name || 'My Farm',
-                            district,
-                            village
-                        })
+                    const newFarmRef = doc(collection(db, 'farms'))
+                    await setDoc(newFarmRef, {
+                        owner_id: user.id,
+                        farm_name: data.farm_name || 'My Farm',
+                        district,
+                        village
+                    })
                 }
             }
 
-            // Sync fresh profile state
             const refreshed = await fetchUserProfile(user.id, user.email)
             if (refreshed) {
                 setUser(refreshed)
                 localStorage.setItem('agrisense_user', JSON.stringify(refreshed))
             }
 
-            window.dispatchEvent(
-                new CustomEvent('mazaosmart-toast', {
-                    detail: { message: 'Profile metrics updated successfully.', type: 'success' }
-                })
-            )
             return { success: true }
-
         } catch (e: any) {
             console.error('Update profile validation failed:', e)
             return { success: false, error: e.message || 'Could not connect to database.' }
@@ -572,18 +430,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const changePassword = async (_current: string, newPass: string) => {
-        if (!token) return { success: false, error: 'Unauthorized' }
-        if (token.startsWith('offline_')) {
-            return { success: true }
-        }
-
+        if (!auth.currentUser) return { success: false, error: 'Unauthorized' }
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: newPass
-            })
-
-            if (error) throw error
-
+            await updatePassword(auth.currentUser, newPass)
             window.dispatchEvent(
                 new CustomEvent('mazaosmart-toast', {
                     detail: { message: 'Security credentials updated.', type: 'success' }
@@ -605,16 +454,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ profile_image: base64Image })
-                .eq('id', user.id)
-
-            if (error) throw error
+            const userRef = doc(db, 'users', user.id)
+            await updateDoc(userRef, { profile_image: base64Image })
 
             setUser(prev => prev ? { ...prev, profile_image: base64Image } : null)
 
-            // Sync with local storage
             const cachedUser = localStorage.getItem('agrisense_user')
             if (cachedUser) {
                 const parsed = JSON.parse(cachedUser)
@@ -633,61 +477,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             let email = emailOrUsername.trim()
             if (!email.includes('@')) {
-                const { data } = await supabase
-                    .from('users')
-                    .select('email')
-                    .eq('username', email)
-                    .maybeSingle()
-                if (data?.email) {
-                    email = data.email
+                const usersRef = collection(db, 'users')
+                const q = query(usersRef, where('username', '==', email))
+                const querySnapshot = await getDocs(q)
+
+                if (!querySnapshot.empty) {
+                    const userData = querySnapshot.docs[0].data()
+                    if (userData.email) {
+                        email = userData.email
+                    }
                 }
             }
 
-            // Offline helper
-            if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
-                const fakeToken = Math.floor(100000 + Math.random() * 900000).toString()
-                return { success: true, message: 'Offline simulation reset requested.', token: fakeToken }
-            }
-
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`
-            })
-
-            if (error) throw error
+            await sendPasswordResetEmail(auth, email)
 
             return { success: true, message: 'Password reset link sent to your registered email address!', token: 'Email Link Sent' }
         } catch (e: any) {
-            return { success: false, error: e.message || 'Verification server is offline.' }
+            return { success: false, error: e.message || 'Verification server error.' }
         }
     }
 
     const resetPassword = async (resetToken: string, newPass: string) => {
-        try {
-            if (resetToken.length === 6 && !isNaN(Number(resetToken))) {
-                // Local offline simulated reset
-                window.dispatchEvent(
-                    new CustomEvent('mazaosmart-toast', {
-                        detail: { message: 'Offline Mode: Simulated password reset complete.', type: 'success' }
-                    })
-                )
-                return { success: true }
-            }
-
-            const { error } = await supabase.auth.updateUser({
-                password: newPass
-            })
-
-            if (error) throw error
-
-            window.dispatchEvent(
-                new CustomEvent('mazaosmart-toast', {
-                    detail: { message: 'Password reset successfully.', type: 'success' }
-                })
-            )
+        // Normally handled by the email link natively by Firebase.
+        // If a reset code system is still needed, it takes custom implementation.
+        // Assuming user clicks a link and we just show complete.
+        if (resetToken.length === 6 && !isNaN(Number(resetToken))) {
             return { success: true }
-        } catch (e: any) {
-            return { success: false, error: e.message || 'Security reset failed.' }
         }
+        return { success: false, error: 'Token reset system not fully compatible without custom backend in Firebase.' }
     }
 
     const value = {
@@ -715,4 +532,3 @@ export const useAuth = () => {
     }
     return context
 }
-

@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { auth, db } from '../lib/firebase'
+import { collection, query, where, getDocs, setDoc, doc, updateDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
 
 export type SensorStatus = 'optimal' | 'low' | 'critical' | 'offline'
@@ -566,171 +567,124 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
         // 1. Get/create farm
         let farmId = ''
-        const { data: farms, error: farmErr } = await supabase
-          .from('farms')
-          .select('id')
-          .eq('owner_id', user.id)
+        const farmsRef = collection(db, 'farms')
+        const qFarm = query(farmsRef, where('owner_id', '==', user.id))
+        const farmsSnap = await getDocs(qFarm)
 
-        if (farmErr) throw farmErr
-
-        if (farms && farms.length > 0) {
-          farmId = farms[0].id
+        if (!farmsSnap.empty) {
+          farmId = farmsSnap.docs[0].id
         } else {
-          const { data: newFarm, error: newFarmErr } = await supabase
-            .from('farms')
-            .insert({
-              owner_id: user.id,
-              farm_name: user.farm_name || 'Mbarara Pilot Farm',
-              district: 'Mbarara',
-              village: 'Ruti',
-              latitude: -0.6074,
-              longitude: 30.6548,
-              description: 'Main cultivation site'
-            })
-            .select()
-            .single()
-
-          if (newFarmErr) throw newFarmErr
-          if (newFarm) farmId = newFarm.id
+          const newFarmRef = doc(collection(db, 'farms'))
+          await setDoc(newFarmRef, {
+            owner_id: user.id,
+            farm_name: user.farm_name || 'Mbarara Pilot Farm',
+            district: 'Mbarara',
+            village: 'Ruti',
+            latitude: -0.6074,
+            longitude: 30.6548,
+            description: 'Main cultivation site'
+          })
+          farmId = newFarmRef.id
         }
 
         // 2. Get/create greenhouse
         let greenhouseId = ''
-        const { data: greenhouses, error: ghErr } = await supabase
-          .from('greenhouses')
-          .select('id')
-          .eq('farm_id', farmId)
-          .eq('name', 'Main Greenhouse')
+        const ghRef = collection(db, 'greenhouses')
+        const qGh = query(ghRef, where('farm_id', '==', farmId), where('name', '==', 'Main Greenhouse'))
+        const ghSnap = await getDocs(qGh)
 
-        if (ghErr) throw ghErr
-
-        if (greenhouses && greenhouses.length > 0) {
-          greenhouseId = greenhouses[0].id
+        if (!ghSnap.empty) {
+          greenhouseId = ghSnap.docs[0].id
         } else {
-          const { data: gk, error: newGhErr } = await supabase
-            .from('greenhouses')
-            .insert({
-              farm_id: farmId,
-              name: 'Main Greenhouse',
-              location_details: 'North sector'
-            })
-            .select()
-            .single()
-          if (newGhErr) throw newGhErr
-          if (gk) greenhouseId = gk.id
+          const newGhRef = doc(collection(db, 'greenhouses'))
+          await setDoc(newGhRef, {
+            farm_id: farmId,
+            name: 'Main Greenhouse',
+            location_details: 'North sector'
+          })
+          greenhouseId = newGhRef.id
         }
 
         // 3. Get/create outdoor garden
         let gardenId = ''
-        const { data: gardens, error: gardenErr } = await supabase
-          .from('outdoor_gardens')
-          .select('id')
-          .eq('farm_id', farmId)
-          .eq('name', 'Main Garden')
+        const gardenRef = collection(db, 'outdoor_gardens')
+        const qGarden = query(gardenRef, where('farm_id', '==', farmId), where('name', '==', 'Main Garden'))
+        const gardenSnap = await getDocs(qGarden)
 
-        if (gardenErr) throw gardenErr
-
-        if (gardens && gardens.length > 0) {
-          gardenId = gardens[0].id
+        if (!gardenSnap.empty) {
+          gardenId = gardenSnap.docs[0].id
         } else {
-          const { data: gd, error: newGdErr } = await supabase
-            .from('outdoor_gardens')
-            .insert({
-              farm_id: farmId,
-              name: 'Main Garden',
-              crop_type: 'Mixed',
-              area_sq_meters: 1000
-            })
-            .select()
-            .single()
-          if (newGdErr) throw newGdErr
-          if (gd) gardenId = gd.id
+          const newGdRef = doc(collection(db, 'outdoor_gardens'))
+          await setDoc(newGdRef, {
+            farm_id: farmId,
+            name: 'Main Garden',
+            crop_type: 'Mixed',
+            area_sq_meters: 1000
+          })
+          gardenId = newGdRef.id
         }
 
         // 4. Get/create ESP32 device
         let deviceId = ''
-        const { data: devices, error: devErr } = await supabase
-          .from('esp32_devices')
-          .select('id')
-          .eq('farm_id', farmId)
+        const devRef = collection(db, 'esp32_devices')
+        const qDev = query(devRef, where('farm_id', '==', farmId))
+        const devSnap = await getDocs(qDev)
 
-        if (devErr) throw devErr
-
-        if (devices && devices.length > 0) {
-          deviceId = devices[0].id
+        if (!devSnap.empty) {
+          deviceId = devSnap.docs[0].id
         } else {
-          const { data: newDev, error: newDevErr } = await supabase
-            .from('esp32_devices')
-            .insert({
-              farm_id: farmId,
-              device_name: 'ESP32 Gateway Node',
-              mac_address: `00:0a:95:9d:68:${user.id.substring(0, 2)}`,
-              firmware_version: 'v2.1',
-              status: 'active'
-            })
-            .select()
-            .single()
-          if (newDevErr) throw newDevErr
-          if (newDev) deviceId = newDev.id
+          const newDevRef = doc(collection(db, 'esp32_devices'))
+          await setDoc(newDevRef, {
+            farm_id: farmId,
+            device_name: 'ESP32 Gateway Node',
+            mac_address: `00:0a:95:9d:68:${user.id.substring(0, 2)}`,
+            firmware_version: 'v2.1',
+            status: 'active'
+          })
+          deviceId = newDevRef.id
         }
 
         // 5. Get/create pump
         let pumpActive = stateRef.current.pumpActive
-        const { data: pumps, error: pumpErr } = await supabase
-          .from('pumps')
-          .select('*')
-          .eq('farm_id', farmId)
-          .eq('name', 'Primary Pump')
+        const pumpRef = collection(db, 'pumps')
+        const qPump = query(pumpRef, where('farm_id', '==', farmId), where('name', '==', 'Primary Pump'))
+        const pumpSnap = await getDocs(qPump)
 
-        if (pumpErr) throw pumpErr
-
-        if (pumps && pumps.length > 0) {
-          pumpActive = pumps[0].status
+        if (!pumpSnap.empty) {
+          pumpActive = pumpSnap.docs[0].data().status
         } else {
-          await supabase
-            .from('pumps')
-            .insert({
-              farm_id: farmId,
-              name: 'Primary Pump',
-              status: pumpActive,
-              flow_rate_lpm: 60.0
-            })
+          await setDoc(doc(collection(db, 'pumps')), {
+            farm_id: farmId,
+            name: 'Primary Pump',
+            status: pumpActive,
+            flow_rate_lpm: 60.0
+          })
         }
 
         // 6. Get/create water tank
         let tankLevel = stateRef.current.tankLevel
-        const { data: tanks, error: tankErr } = await supabase
-          .from('water_tanks')
-          .select('*')
-          .eq('farm_id', farmId)
-          .eq('name', 'Primary Reservoir')
+        const tankRef = collection(db, 'water_tanks')
+        const qTank = query(tankRef, where('farm_id', '==', farmId), where('name', '==', 'Primary Reservoir'))
+        const tankSnap = await getDocs(qTank)
 
-        if (tankErr) throw tankErr
-
-        if (tanks && tanks.length > 0) {
-          tankLevel = Math.round(Number(tanks[0].current_level_liters))
+        if (!tankSnap.empty) {
+          tankLevel = Math.round(Number(tankSnap.docs[0].data().current_level_liters))
         } else {
-          await supabase
-            .from('water_tanks')
-            .insert({
-              farm_id: farmId,
-              name: 'Primary Reservoir',
-              capacity_liters: 5000.0,
-              current_level_liters: tankLevel
-            })
+          await setDoc(doc(collection(db, 'water_tanks')), {
+            farm_id: farmId,
+            name: 'Primary Reservoir',
+            capacity_liters: 5000.0,
+            current_level_liters: tankLevel
+          })
         }
 
         // 7. Get/create soil moisture sensors
-        const { data: sensorsData, error: sensErr } = await supabase
-          .from('soil_moisture_sensors')
-          .select('*')
-
-        if (sensErr) throw sensErr
+        const sensRef = collection(db, 'soil_moisture_sensors')
+        const sensSnap = await getDocs(sensRef)
 
         const finalSensors: SensorNode[] = []
-        const currentSensorsInDb = sensorsData || []
 
-        if (currentSensorsInDb.length === 0) {
+        if (sensSnap.empty) {
           // No sensors in DB yet. Create default 6 sensors
           const defaults = [
             { sensor_code: 'A1', greenhouse_id: null, garden_id: gardenId, device_id: deviceId, crop: 'Maize', depth_cm: 30, min_moisture: 30, max_moisture: 65, current_moisture: 52, current_temp: 24.3, online: true, irrigating: false },
@@ -739,56 +693,54 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
             { sensor_code: 'B4', greenhouse_id: greenhouseId, garden_id: null, device_id: deviceId, crop: 'Beans', depth_cm: 20, min_moisture: 35, max_moisture: 70, current_moisture: 45, current_temp: 25.0, online: true, irrigating: false },
             { sensor_code: 'C1', greenhouse_id: null, garden_id: gardenId, device_id: deviceId, crop: 'Sorghum', depth_cm: 45, min_moisture: 30, max_moisture: 65, current_moisture: 55, current_temp: 24.7, online: true, irrigating: false },
             { sensor_code: 'C2', greenhouse_id: null, garden_id: gardenId, device_id: deviceId, crop: 'Sorghum', depth_cm: 45, min_moisture: 30, max_moisture: 65, current_moisture: 38, current_temp: 25.4, online: true, irrigating: false }
-          ] as any[]
+          ]
 
           for (const d of defaults) {
-            const { data: insertedSensor, error: insErr } = await supabase
-              .from('soil_moisture_sensors')
-              .insert(d)
-              .select()
-              .single()
+            const newSenRef = doc(collection(db, 'soil_moisture_sensors'))
+            await setDoc(newSenRef, d)
 
-            if (insErr) {
-              console.error('Error inserting sensor:', insErr)
-            } else if (insertedSensor) {
-              sensorUuidMapRef.current[insertedSensor.sensor_code] = insertedSensor.id
-              const stateDefault = stateRef.current.sensors.find(s => s.id === insertedSensor.sensor_code)
-              finalSensors.push({
-                id: insertedSensor.sensor_code,
-                plot: `Plot ${insertedSensor.sensor_code} (${insertedSensor.crop})`,
-                crop: insertedSensor.crop || '',
-                depth: `${insertedSensor.depth_cm} cm`,
-                area: stateDefault?.area || '0.4 ha',
-                moisture: Number(insertedSensor.current_moisture),
-                temp: Number(insertedSensor.current_temp),
-                battery: stateDefault?.battery || 90,
-                status: statusFor(Number(insertedSensor.current_moisture), Number(insertedSensor.min_moisture), !!insertedSensor.online),
-                mode: stateDefault?.mode || 'auto',
-                irrigating: !!insertedSensor.irrigating,
-                minMoisture: Number(insertedSensor.min_moisture),
-                maxMoisture: Number(insertedSensor.max_moisture),
-                history: stateDefault?.history || Array(24).fill(Number(insertedSensor.current_moisture)),
-                online: !!insertedSensor.online,
-                signalStrength: stateDefault?.signalStrength || 90
-              })
-            }
+            sensorUuidMapRef.current[d.sensor_code] = newSenRef.id
+            const stateDefault = stateRef.current.sensors.find(s => s.id === d.sensor_code)
+            finalSensors.push({
+              id: d.sensor_code,
+              plot: `Plot ${d.sensor_code} (${d.crop})`,
+              crop: d.crop || '',
+              depth: `${d.depth_cm} cm`,
+              area: stateDefault?.area || '0.4 ha',
+              moisture: Number(d.current_moisture),
+              temp: Number(d.current_temp),
+              battery: stateDefault?.battery || 90,
+              status: statusFor(Number(d.current_moisture), Number(d.min_moisture), !!d.online),
+              mode: stateDefault?.mode || 'auto',
+              irrigating: !!d.irrigating,
+              minMoisture: Number(d.min_moisture),
+              maxMoisture: Number(d.max_moisture),
+              history: stateDefault?.history || Array(24).fill(Number(d.current_moisture)),
+              online: !!d.online,
+              signalStrength: stateDefault?.signalStrength || 90
+            })
           }
         } else {
           // Sensors exist in DB. Fetch them and populate mapping
+          const currentSensorsInDb = sensSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[]
+
           for (const s of currentSensorsInDb) {
             sensorUuidMapRef.current[s.sensor_code] = s.id
             const stateDefault = stateRef.current.sensors.find(ds => ds.id === s.sensor_code)
 
             // Fetch history from moisture_readings table
-            const { data: readings } = await supabase
-              .from('moisture_readings')
-              .select('moisture')
-              .eq('sensor_id', s.id)
-              .order('created_at', { ascending: false })
-              .limit(24)
+            const readingsRef = collection(db, 'moisture_readings')
+            const qRead = query(readingsRef, where('sensor_id', '==', s.id))
+            const readingsSnap = await getDocs(qRead)
 
-            const historyReadings = readings && readings.length > 0
-              ? readings.map(r => Math.round(Number(r.moisture))).reverse()
+            const readings = readingsSnap.docs.map(d => d.data())
+            // Note: complex sorting wasn't handled in simple Firebase getDocs to avoid missing index errors easily,
+            // we sort in memory for this demo.
+            readings.sort((a, b) => b.created_at?.localeCompare(a.created_at || '') || 0)
+            const recentReadings = readings.slice(0, 24)
+
+            const historyReadings = recentReadings.length > 0
+              ? recentReadings.map(r => Math.round(Number(r.moisture))).reverse()
               : Array(24).fill(Number(s.current_moisture))
 
             // Pad history to 24 items if needed
@@ -829,9 +781,9 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
           })
         }
         setDbSyncedOnce(true)
-        console.log('Successfully completed Supabase telemetry sync!')
+        console.log('Successfully completed Firebase telemetry sync!')
       } catch (err) {
-        console.error('Error syncing telemetry state from Supabase:', err)
+        console.error('Error syncing telemetry state from Firebase:', err)
       }
     }
 
@@ -860,59 +812,65 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       syncInProgressRef.current = true
       try {
         // Find farm
-        const { data: farms } = await supabase
-          .from('farms')
-          .select('id')
-          .eq('owner_id', user.id)
-          .limit(1)
+        const farmsRef = collection(db, 'farms')
+        const qFarm = query(farmsRef, where('owner_id', '==', user.id))
+        const farmsSnap = await getDocs(qFarm)
 
-        const farmId = farms?.[0]?.id
+        const farmId = farmsSnap.empty ? null : farmsSnap.docs[0].id
         if (!farmId) return
 
         // 1. Sync sensors
         for (const s of state.sensors) {
           const uuid = sensorUuidMapRef.current[s.id]
           if (uuid) {
-            await supabase
-              .from('soil_moisture_sensors')
-              .update({
-                current_moisture: s.moisture,
-                current_temp: s.temp,
-                online: s.online,
-                irrigating: s.irrigating,
-                min_moisture: s.minMoisture,
-                max_moisture: s.maxMoisture
-              })
-              .eq('id', uuid)
+            const sensRef = doc(db, 'soil_moisture_sensors', uuid)
+            await updateDoc(sensRef, {
+              current_moisture: s.moisture,
+              current_temp: s.temp,
+              online: s.online,
+              irrigating: s.irrigating,
+              min_moisture: s.minMoisture,
+              max_moisture: s.maxMoisture
+            })
 
             // Insert telemetry logs to moisture_readings table on tick update
             if (isTickChange) {
-              await supabase
-                .from('moisture_readings')
-                .insert({
-                  sensor_id: uuid,
-                  moisture: s.moisture,
-                  temp: s.temp
-                })
+              const readingsRef = doc(collection(db, 'moisture_readings'))
+              await setDoc(readingsRef, {
+                sensor_id: uuid,
+                moisture: s.moisture,
+                temp: s.temp,
+                created_at: new Date().toISOString()
+              })
             }
           }
         }
 
         // 2. Sync pump
-        await supabase
-          .from('pumps')
-          .update({ status: state.pumpActive })
-          .eq('farm_id', farmId)
+        const pumpRef = collection(db, 'pumps')
+        const qPump = query(pumpRef, where('farm_id', '==', farmId))
+        const pumpSnap = await getDocs(qPump)
+
+        if (!pumpSnap.empty) {
+          pumpSnap.forEach(async d => {
+            await updateDoc(doc(db, 'pumps', d.id), { status: state.pumpActive })
+          })
+        }
 
         // 3. Sync tank
-        await supabase
-          .from('water_tanks')
-          .update({ current_level_liters: state.tankLevel })
-          .eq('farm_id', farmId)
+        const tankRef = collection(db, 'water_tanks')
+        const qTank = query(tankRef, where('farm_id', '==', farmId))
+        const tankSnap = await getDocs(qTank)
+
+        if (!tankSnap.empty) {
+          tankSnap.forEach(async d => {
+            await updateDoc(doc(db, 'water_tanks', d.id), { current_level_liters: state.tankLevel })
+          })
+        }
 
         lastSyncedTickRef.current = state.tick
       } catch (err) {
-        console.error('Failed to sync simulation updates to Supabase:', err)
+        console.error('Failed to sync simulation updates to Firebase:', err)
       } finally {
         syncInProgressRef.current = false
       }
